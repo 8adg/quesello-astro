@@ -1,0 +1,65 @@
+---
+/**
+ * Componente TopNav
+ * Barra de utilidad superior con ubicación y acceso al carrito.
+ */
+const { franchise, showCart = true, showLocation = true } = Astro.props;
+const locationName = franchise?.nombre || "CASA MATRIZ";
+---
+
+<nav class="top-nav">
+  {showLocation && (
+    <div class="location-tag">
+      <img
+        src="https://api.iconify.design/gravity-ui:heart-fill.svg?color=%23b2a782"
+        width="16"
+        height="16"
+        alt="heart"
+      />
+      <span>{locationName.toUpperCase()}</span>
+    </div>
+  )}
+
+  <div class="header-util-area">
+    {showCart && (
+       <div class="cart-placeholder">
+         <!-- Aquí es donde flota el CartIcon island -->
+       </div>
+    )}
+  </div>
+</nav>
+
+<style>
+  .top-nav {
+    padding: 16px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 80px;
+  }
+
+  .location-tag {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-outfit);
+    font-size: 13px;
+    font-weight: 700;
+    color: #b2a782;
+    letter-spacing: 0.1em;
+    opacity: 0.8;
+  }
+
+  .header-util-area {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+  }
+
+  .cart-placeholder {
+    width: 48px;
+    height: 48px;
+  }
+</style>

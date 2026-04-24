@@ -1,0 +1,178 @@
+---
+import AdminLayout from "../../layouts/AdminLayout.astro";
+import { supabase } from "../../lib/supabase";
+
+const title = "Panel de Control - Admin Queselló";
+
+// --- CABLEADO DE DATOS REALES ---
+const currentDate = new Date();
+const currentMonthName = currentDate.toLocaleString('es-AR', { month: 'long', year: 'numeric' });
+
+// Rangos de fechas para comparativa
+const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).toISOString();
+const firstDayOfPrevMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1).toISOString();
+const lastDayOfPrevMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 0).toISOString();
+
+// 1. Ventas Mes Actual
+const { data: salesNow } = await supabase.from('presupuestos').select('total').gte('creado_en', firstDayOfMonth);
+const currentTotal = salesNow?.reduce((acc, o) => acc + (o.total || 0), 0) || 0;
+
+// 2. Ventas Mes Anterior (para el %)
+const { data: salesPrev } = await supabase.from('presupuestos').select('total').gte('creado_en', firstDayOfPrevMonth).lte('creado_en', lastDayOfPrevMonth);
+const prevTotal = salesPrev?.reduce((acc, o) => acc + (o.total || 0), 0) || 1; // Evitar división por cero
+const growth = Math.round(((currentTotal - prevTotal) / prevTotal) * 100);
+
+// 3. Conteo de Estados
+const { count: pendingCount } = await supabase.from('presupuestos').select('*', { count: 'exact', head: true }).neq('estado', 'ENTREGADO');
+const { count: deliveredCount } = await supabase.from('presupuestos').select('*', { count: 'exact', head: true }).eq('estado', 'ENTREGADO');
+const { count: productsCount } = await supabase.from('productos').select('*', { count: 'exact', head: true }).eq('activo', 1).eq('franquicia_id', 1);
+
+// 4. Últimas Notificaciones
+const { data: recent } = await supabase.from('presupuestos').select('cliente, estado, creado_en').order('creado_en', { ascending: false }).limit(2);
+---
+
+<AdminLayout title={title} activeId="dashboard">
+	<header
+		style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px;"
+	>
+		<div
+			style="background: #FF5E5E; color: white; padding: 12px 30px; border-radius: 20px; font-weight: 700; font-size: 20px; text-transform: uppercase;"
+		>
+			Panel de control
+		</div>
+
+		<div
+			style="display: flex; flex-direction: column; align-items: flex-end;"
+		>
+			<div
+				style="background: rgba(74, 85, 104, 0.05); padding: 10px 20px; border-radius: 20px; font-weight: 700; color: #4A5568; display: flex; align-items: center; gap: 8px; margin-bottom: 10px; text-transform: capitalize;"
+			>
+                <img src="https://api.iconify.design/lucide:calendar.svg?color=%23FF5E5E" width="18" />
+				{currentMonthName}
+			</div>
+			<div style="text-align: right;">
+				<h2
+					style="font-size: 64px; margin: 0; color: #495D56; font-weight: 800;line-height: 1.3;"
+				>
+					${currentTotal.toLocaleString('es-AR')}
+				</h2>
+				<div
+					style="display: flex; gap: 10px; justify-content: flex-end; align-items: center; margin-top: 5px;"
+				>
+					<span
+						style="background: #00B67A; color: white; padding: 4px 12px; border-radius: 8px; font-size: 12px; font-weight: 700;"
+						>VENTAS NETAS</span
+					>
+					<span
+						style={`color: ${growth >= 0 ? '#00B67A' : '#FF5E5E'}; font-weight: 700; fontSize: 14px;`}
+					>
+                        {growth >= 0 ? '▲' : '▼'} {growth >= 0 ? '+' : ''}{growth}% este mes
+                    </span>
+				</div>
+			</div>
+		</div>
+	</header>
+
+	<!-- Icons and Stats visual section -->
+	<div
+		style="display: flex; gap: 24px; flex: 1; align-items: center; justify-content: center; position: relative; padding: 60px 0; z-index: 10;"
+	>
+        <!-- Imágenes de Fondo (Mockup characters) -->
+        <img src="/pendientes-portada.png" style="position: absolute; left: 15%; bottom: 25vh; height: 30vw; z-index: -1; opacity: 1;" />
+        <img src="/entregados.png" style="position: absolute; right: 30%; bottom: 25vh; height: 30vw; z-index: -1; opacity: 1;" />
+
+		<div
+			style="background: rgba(250, 249, 246, 0.85); backdrop-filter: blur(10px); padding: 30px; border-radius: 35px; text-align: center; width: 260px; border: 1px solid #dfded9ce; box-shadow: 0 20px 40px rgba(0,0,0,0.03);"
+		>
+			<div
+				style="font-size: 16px; color: #4A5568; font-weight: 700; margin-bottom: 20px; letter-spacing: -0.01em;"
+			>
+				Pedidos pendientes
+			</div>
+			<div
+				style="font-size: 80px; font-weight: 800; color: #FF5E5E; line-height: 1;"
+			>
+				{pendingCount}
+			</div>
+            <a href="/admin/presupuestos" style="text-decoration: none;">
+                <button
+                    class="btn"
+                    style="margin-top: 25px; width: 100%; border-radius: 20px; padding: 12px; cursor: pointer;"
+                    >Ver Pedidos</button
+                >
+            </a>
+		</div>
+
+		<div
+			style="background: rgba(250, 249, 246, 0.85); backdrop-filter: blur(10px); padding: 30px; border-radius: 35px; text-align: center; width: 260px; border: 1px solid #dfded9ce; box-shadow: 0 20px 40px rgba(0,0,0,0.03);"
+		>
+			<div
+				style="font-size: 16px; color: #4A5568; font-weight: 700; margin-bottom: 20px; letter-spacing: -0.01em;"
+			>
+				Pedidos entregados
+			</div>
+			<div
+				style="font-size: 80px; font-weight: 800; color: #495D56; line-height: 1;"
+			>
+				{deliveredCount}
+			</div>
+            <a href="/admin/presupuestos" style="text-decoration: none;">
+                <button
+                    class="btn"
+                    style="margin-top: 25px; width: 100%; border-radius: 20px; background: #FF5E5E; padding: 12px; cursor: pointer;"
+                    >Historial</button
+                >
+            </a>
+		</div>
+
+		<div
+			style="background: rgba(250, 249, 246, 0.85); backdrop-filter: blur(10px); padding: 30px; border-radius: 35px; text-align: center; width: 260px; border: 1px solid #dfded9ce; box-shadow: 0 20px 40px rgba(0,0,0,0.03);"
+		>
+			<div
+				style="font-size: 16px; color: #4A5568; font-weight: 700; margin-bottom: 20px; letter-spacing: -0.01em;"
+			>
+				Productos activos
+			</div>
+			<div
+				style="font-size: 80px; font-weight: 800; color: #4A5568; line-height: 1;"
+			>
+				{productsCount}
+			</div>
+            <a href="/admin/productos" style="text-decoration: none;">
+                <button
+                    class="btn"
+                    style="margin-top: 25px; width: 100%; border-radius: 20px; background: #111; padding: 12px; cursor: pointer;"
+                    >Catálogo</button
+                >
+            </a>
+		</div>
+	</div>
+
+	<!-- Bottom Notifications -->
+	<footer style="margin-top: auto; display: flex; gap: 20px; padding-bottom: 20px;">
+		{recent?.map(order => (
+            <div
+                style="background: #EED7D7; border-radius: 18px; padding: 18px 25px; display: flex; align-items: center; gap: 15px; flex: 1; color: #4A5568; font-weight: 700; border: 1px solid rgba(0,0,0,0.05);"
+            >
+                <div
+                    style="background: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);"
+                >!</div>
+                {order.estado === 'PAUSADO' ? 'Nuevo pre-pedido de' : 'Nuevo pedido de'} <span style="color: #FF5E5E; margin-left: 5px;">{order.cliente}</span>
+                <span style="margin-left: auto; cursor: pointer; opacity: 0.5;">×</span>
+            </div>
+        ))}
+        {(!recent || recent.length === 0) && (
+            <div style="text-align: center; width: 100%; opacity: 0.3; font-weight: 700; font-size: 14px;">No hay actividad reciente</div>
+        )}
+	</footer>
+</AdminLayout>
+
+<style>
+    .btn {
+        transition: transform 0.2s, filter 0.2s;
+    }
+    .btn:hover {
+        transform: translateY(-2px);
+        filter: brightness(1.1);
+    }
+</style>

@@ -1,0 +1,63 @@
+---
+import Layout from "./Layout.astro";
+import AdminSidebar from "../components/admin/AdminSidebar.jsx";
+import AdminAuth from "../components/admin/AdminAuth.jsx";
+
+interface Props {
+	title: string;
+	activeId: string;
+}
+
+const { title, activeId } = Astro.props;
+---
+
+<Layout title={title}>
+	<AdminAuth client:only="react">
+		<div
+			style="display: flex; gap: 20px; padding: 20px; min-height: 100vh; width: 100%; box-sizing: border-box; background-color: #F0EEE4;"
+		>
+			<div
+				style="position: sticky; top: 20px; align-self: flex-start; z-index: 50;"
+			>
+				<AdminSidebar client:load activeId={activeId} />
+			</div>
+
+			<main
+				style="flex: 1; min-height: calc(100vh - 40px); background: radial-gradient(circle,rgba(247, 244, 215, 1) 0%, rgba(243, 242, 238, 1) 55%); border-radius: 40px; padding: 40px; box-shadow: 0 10px 40px rgba(0,0,0,0.02); display: flex; flex-direction: column; position: relative;"
+			>
+				<slot />
+			</main>
+		</div>
+	</AdminAuth>
+</Layout>
+
+<style is:global>
+	/* Reset specific for admin area if needed */
+	body {
+		background-color: #f0eee4 !important;
+	}
+
+	.select-wrapper {
+		position: relative;
+		display: flex;
+		align-items: center;
+	}
+
+	.select-wrapper::after {
+		content: "▼";
+		position: absolute;
+		right: 15px;
+		top: 50%;
+		transform: translateY(-50%);
+		pointer-events: none;
+		font-size: 10px;
+		opacity: 0.5;
+	}
+
+	.select-wrapper select {
+		padding-right: 30px !important;
+		appearance: none;
+		-webkit-appearance: none;
+		cursor: pointer;
+	}
+</style>

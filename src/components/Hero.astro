@@ -1,0 +1,61 @@
+---
+---
+<section class="section" style="overflow: hidden;">
+  <h1 id="hero-title" style="transform-origin: center top; will-change: transform;">
+    Tu sello<br />es emprender
+  </h1>
+  <div id="hero-image" style="will-change: transform; width: 100%; display: flex; justify-content: center;">
+    <img
+      src="/portada.png"
+      alt="Tu sello es emprender"
+      width="400"
+      height="400"
+      style="width: 100%; maxWidth: 380px; height: auto; margin-bottom: 0px;"
+    />
+  </div>
+  <button
+    id="cta-button"
+    class="btn"
+  >
+    Quiero mi sello
+  </button>
+</section>
+
+<script>
+  function attachParallax() {
+    const heroTitle = document.getElementById('hero-title');
+    const heroImage = document.getElementById('hero-image');
+    if (!heroTitle || !heroImage) return;
+
+    window.addEventListener('scroll', () => {
+      const y = window.scrollY;
+      
+      // Lógica 1:1 con quesello-web/app/page.js
+      heroTitle.style.transform = `translateY(${y * 0.18}px) scale(${1 + y * 0.0009})`;
+      heroImage.style.transform = `translateY(${y * -0.12}px)`;
+    }, { passive: true });
+
+    document.getElementById('cta-button')?.addEventListener('click', () => {
+      document.getElementById('products-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }
+
+  function init() {
+    const heroTitle = document.getElementById('hero-title');
+    if (heroTitle) {
+      attachParallax();
+    } else {
+      // Esperamos a que React (DesktopGate) hidrate el contenido
+      const observer = new MutationObserver((_, obs) => {
+        if (document.getElementById('hero-title')) {
+          attachParallax();
+          obs.disconnect();
+        }
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', init);
+  document.addEventListener('astro:page-load', init);
+</script>

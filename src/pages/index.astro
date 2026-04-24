@@ -1,0 +1,54 @@
+---
+import Layout from "../layouts/Layout.astro";
+import DesktopGate from "../components/DesktopGate.jsx";
+import TopNav from "../components/TopNav.astro";
+import Header from "../components/Header.astro";
+import Hero from "../components/Hero.astro";
+import Franquicia from "../components/Franquicia.astro";
+import OrderStatusCard from "../components/OrderStatusCard.astro";
+import SlidersLoader from "../components/SlidersLoader.jsx";
+import Footer from "../components/Footer.astro";
+import { CartIcon, CartDrawer } from "../components/Cart.jsx";
+
+import { supabase } from "../lib/supabase";
+
+// Solo traemos la franquicia (dato estático, no cambia frecuentemente)
+let loadingError = null;
+
+try {
+	const { data: centralFranchise } = await supabase.from('franquicias').select('*').eq('id', 1).single();
+	var franchise = centralFranchise || { id: 1, nombre: 'Central Queselló', whatsapp: '5492235203360' };
+} catch (err) {
+	console.error('Landing Error:', err);
+	loadingError = err.message;
+}
+---
+
+<Layout>
+	<DesktopGate client:load>
+		<main class="w-full flex flex-col items-center">
+			
+            <TopNav franchise={franchise} />
+            
+			<div class="container text-center">
+				<Header />
+				<Hero />
+				<Franquicia />
+			</div>
+			
+			<OrderStatusCard />
+
+			<!-- CARRUSELES DINÁMICOS (cargados en cliente, siempre frescos) -->
+			<div id="products-section" class="w-full overflow-hidden">
+				<SlidersLoader client:load />
+			</div>
+
+			<div class="container">
+				<Footer />
+			</div>
+		</main>
+
+		<CartIcon client:load franchise={franchise} />
+		<CartDrawer client:load />
+	</DesktopGate>
+</Layout>

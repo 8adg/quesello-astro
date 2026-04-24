@@ -1,0 +1,8 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import FranchiseManager from '../../../components/admin/FranchiseManager';
+---
+
+<AdminLayout title="Franquicias | Queselló Admin" activeId="franquicias">
+  <FranchiseManager client:load />
+</AdminLayout>

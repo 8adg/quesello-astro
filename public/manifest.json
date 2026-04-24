@@ -1,0 +1,63 @@
+{
+  "name": "Queselló! Tienda Taller de impresión artesanal",
+  "short_name": "Queselló",
+  "description": "Fabricación y venta de sellos de goma para impresión artesanal.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#EDE8D3",
+  "theme_color": "#D9D5C3",
+  "icons": [
+    {
+      "src": "/iconos/92.png",
+      "sizes": "92x92",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/iconos/144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/iconos/192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/iconos/192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/iconos/512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/iconos/512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/portada.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Queselló Móvil"
+    },
+    {
+      "src": "/screenshot.png",
+      "sizes": "1920x1080",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Queselló Desktop"
+    }
+  ]
+}

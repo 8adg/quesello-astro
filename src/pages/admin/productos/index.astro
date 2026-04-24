@@ -1,0 +1,10 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import ProductManager from '../../../components/admin/ProductManager.jsx';
+
+const title = "Catalogo de Productos - Admin Queselló";
+---
+
+<AdminLayout title={title} activeId="productos">
+	<ProductManager client:load />
+</AdminLayout>

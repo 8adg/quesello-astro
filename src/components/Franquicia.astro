@@ -1,0 +1,57 @@
+---
+---
+<section class="section">
+  <!-- LA IMAGEN VA PRIMERO -->
+  <div style="width: 100%; display: flex; justify-content: center; margin-bottom: 20px; overflow: hidden;">
+    <img
+      id="franquicia-image"
+      src="/franquicia.png"
+      alt="Trabajemos juntos"
+      width="400"
+      height="400"
+      style="width: 100%; maxWidth: 380px; height: auto; will-change: transform;"
+    />
+  </div>
+
+  <h1>Trabajemos juntos</h1>
+  <p>Abrí tu franquicia con nosotros.<br />Sé parte de Queselló!</p>
+  <a href="/franquicia" class="btn">Saber más</a>
+</section>
+
+<script>
+  function attachFranquiciaParallax() {
+    const el = document.getElementById('franquicia-image');
+    if (!el) return;
+
+    function update() {
+      const rect = el.getBoundingClientRect();
+      const vh = window.innerHeight;
+      
+      const progress = 1 - rect.bottom / (vh + rect.height);
+      const clamped = Math.max(0, Math.min(progress, 1));
+      const scale = 1 + clamped * 0.15;
+      
+      el.style.transform = `scale(${scale})`;
+    }
+
+    window.addEventListener('scroll', update, { passive: true });
+    update();
+  }
+
+  function init() {
+    if (document.getElementById('franquicia-image')) {
+      attachFranquiciaParallax();
+    } else {
+      const observer = new MutationObserver((_, obs) => {
+        if (document.getElementById('franquicia-image')) {
+          attachFranquiciaParallax();
+          obs.disconnect();
+        }
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', init);
+  document.addEventListener('astro:page-load', init);
+</script>

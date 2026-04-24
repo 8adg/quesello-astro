@@ -1,0 +1,120 @@
+---
+import Layout from '../layouts/Layout.astro';
+import TopNav from '../components/TopNav.astro';
+import Header from '../components/Header.astro';
+import Hero from '../components/Hero.astro';
+import Footer from '../components/Footer.astro';
+import DynamicSlider from '../components/DynamicSlider.jsx';
+import { CartIcon, CartDrawer } from '../components/Cart.jsx';
+import { supabase } from '../lib/supabase';
+
+// EXPORTACIÓN REQUERIDA PARA RUTAS DINÁMICAS EN MODO ESTÁTICO
+export async function getStaticPaths() {
+    const { data: franchises } = await supabase.from('franquicias').select('slug');
+    return (franchises || []).map(f => ({
+        params: { local: f.slug }
+    }));
+}
+
+// 1. Obtener el parámetro de la URL (ej: cordoba)
+const { local } = Astro.params;
+
+let franchise = null;
+let products = [];
+let slidersConfig = [];
+let loadingError = null;
+
+try {
+    // 2. Buscar la franquicia por su slug
+    const { data: fData, error: fError } = await supabase
+        .from("franquicias")
+        .select("*")
+        .eq("slug", local)
+        .single();
+    
+    if (fError || !fData) {
+        return Astro.redirect('/404');
+    }
+    
+    franchise = fData;
+
+    // 3. Traer productos de ESTA franquicia
+    const pRes = await supabase.from("productos").select("*").eq("franquicia_id", franchise.id).eq("activo", 1).order("orden", { ascending: true });
+    if (pRes.error) throw pRes.error;
+    products = pRes.data || [];
+
+    // 4. Traer sliders (usando el sistema dual ajustes/config)
+    const [aRes, cRes] = await Promise.all([
+        supabase.from("ajustes").select("*").eq("id", "app_menus").eq("franquicia_id", franchise.id),
+        supabase.from("config").select("*").eq("clave", "app_menus")
+    ]);
+    
+    let rawValor = null;
+    if (aRes.data && aRes.data.length > 0) rawValor = aRes.data[0].valor;
+    else if (cRes.data && cRes.data.length > 0) rawValor = cRes.data[0].valor;
+
+    if (rawValor) {
+        slidersConfig = JSON.parse(rawValor);
+    }
+} catch (err) {
+    console.error("Error loading franchise page:", err);
+    loadingError = err.message;
+}
+
+// Procesar sliders
+let finalSliders = [];
+if (slidersConfig.length > 0) {
+	finalSliders = slidersConfig.map(config => {
+		let items = [];
+		if (config.items && config.items.length > 0) {
+			items = config.items.map(codigo => products.find(p => p.codigo === codigo)).filter(Boolean);
+		} else if (config.categoriaTarget) {
+			items = products.filter(p => p.categoria === config.categoriaTarget);
+		}
+		return { ...config, items };
+	}).filter(s => s.items.length > 0);
+}
+---
+
+<Layout title={`${franchise?.nombre || 'Local'} - Queselló!`}>
+    <TopNav franchise={franchise} />
+	
+	<main>
+        <Header />
+		<Hero />
+		
+		<div id="sliders-container">
+			{loadingError ? (
+				<div style="text-align:center; padding: 50px; color: #FF5E5E;">Error cargando catálogo: {loadingError}</div>
+			) : (
+				finalSliders.length > 0 ? (
+					finalSliders.map((slider, idx) => (
+						<DynamicSlider
+							key={`slider-${idx}`}
+							client:load
+							title={slider.titulo}
+							subtitle={slider.subtitulo}
+							items={slider.items}
+							config={slider.config}
+						/>
+					))
+				) : (
+					<div style="text-align:center; padding: 100px; opacity: 0.5;">No hay productos configurados para este local.</div>
+				)
+			)}
+		</div>
+
+		<Footer />
+	</main>
+	
+	<CartIcon client:load franchise={franchise} />
+	<CartDrawer client:load />
+</Layout>
+
+<style>
+	main {
+		width: 100%;
+		max-width: 100vw;
+		overflow-x: hidden;
+	}
+</style>

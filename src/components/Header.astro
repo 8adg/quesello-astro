@@ -1,0 +1,51 @@
+---
+/**
+ * Componente Header
+ * Identidad visual principal (Logo).
+ */
+---
+
+<header class="header-main-wrapper">
+  <div class="logo-area">
+    <a href="/">
+      <img
+        src="/logo.svg"
+        alt="Queselló"
+        width="220"
+        height="60"
+        class="logo-img"
+      />
+    </a>
+  </div>
+</header>
+
+<style>
+  .header-main-wrapper {
+    width: 100%;
+    padding: 16px 20px 20px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    box-sizing: border-box;
+  }
+
+  .logo-area {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+  }
+
+  .logo-img {
+    height: 75px; /* Altura desktop */
+    width: auto;
+  }
+
+  @media (max-width: 768px) {
+    .header-main-wrapper {
+      padding: 16px 15px 10px 15px;
+    }
+    .logo-img {
+      height: 48px; /* Altura mobile respetando tu fix */
+    }
+  }
+</style>

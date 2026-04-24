@@ -1,0 +1,51 @@
+---
+import Layout from "../layouts/Layout.astro";
+import TopNav from "../components/TopNav.astro";
+import Header from "../components/Header.astro";
+import DesktopGate from "../components/DesktopGate.jsx";
+import OrderTracker from "../components/OrderTracker.jsx";
+import Footer from "../components/Footer.astro";
+import { supabase } from "../lib/supabase";
+
+const title = "Estado de mi pedido - Queselló!";
+// Traer data de la franquicia principal para consistencia en el Header
+const { data: centralFranchise } = await supabase
+	.from("franquicias")
+	.select("*")
+	.eq("id", 1)
+	.single();
+const franchise = centralFranchise || { id: 1, nombre: "Central Queselló" };
+---
+
+<Layout title={title}>
+	<DesktopGate client:load>
+		<main
+			class="container"
+			style="flex: 1; display: flex; flexDirection: column;"
+		>
+			<!-- Header y Nav unificados con data real -->
+			<TopNav
+				franchise={franchise}
+				showCart={false}
+				showLocation={true}
+			/>
+			<Header />
+
+			<section
+				style="flex: 1; display: flex; flex-direction: column; align-items: center; padding-bottom: 40px;"
+			>
+				<OrderTracker client:load />
+			</section>
+
+			<section class="flex justify-center py-6">
+				<img
+					src="/pedido-ok.webp"
+					alt="mi pedido"
+					style="width: 200px; height: auto;"
+				/>
+			</section>
+
+			<Footer />
+		</main>
+	</DesktopGate>
+</Layout>

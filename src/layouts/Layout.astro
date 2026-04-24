@@ -1,0 +1,110 @@
+---
+import '../styles/global.css';
+
+interface Props {
+	title?: string;
+	description?: string;
+}
+
+const { 
+	title = "Queselló! Tienda Taller", 
+	description = "Fabricación y venta de sellos de goma para impresión artesanal. Encontrá sellos personalizados, almohadillas de tinta y más." 
+} = Astro.props;
+---
+
+<!doctype html>
+<html lang="es">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width" />
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<link rel="icon" type="image/x-icon" href="/favicon.ico" />
+		<link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+		<link rel="apple-touch-icon" href="/iconos/512.png" />
+		<meta name="generator" content={Astro.generator} />
+		
+		<title>{title}</title>
+		<meta name="description" content={description} />
+		<meta name="keywords" content="sellos personalizados,sellos mar del plata, sellos personalizados mar del plata, sellos de goma, impresión artesanal, block printing, estampado manual, almohadillas de tinta, fabricación de sellos" />
+		<meta name="author" content="Queselló! Tienda Taller de impresión artesanal, Matias Ochoa Payva" />
+		
+		<!-- Open Graph -->
+		<meta property="og:title" content={title} />
+		<meta property="og:description" content={description} />
+		<meta property="og:url" content="https://quesello.com.ar" />
+		<meta property="og:site_name" content="Queselló! Tienda Taller" />
+		<meta property="og:image" content="https://quesello.com.ar/site-image.png" />
+		<meta property="og:locale" content="es_AR" />
+		<meta property="og:type" content="website" />
+
+		<!-- PWA / Mobile -->
+		<link rel="manifest" href="/manifest.json" />
+		<meta name="theme-color" content="#D9D5C3" />
+		<meta name="apple-mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-status-bar-style" content="black" />
+
+		<!-- Fonts -->
+		<link rel="preconnect" href="https://fonts.googleapis.com">
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+		<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Outfit:wght@700&display=swap" rel="stylesheet">
+
+		<!-- PWA Service Worker -->
+		<script src="https://unpkg.com/aos@next/dist/aos.js" is:inline></script>
+		<script is:inline>
+			if ('serviceWorker' in navigator) {
+				window.addEventListener('load', () => {
+					navigator.serviceWorker.register('/sw.js');
+				});
+			}
+			
+			// Inicializar AOS
+			document.addEventListener('DOMContentLoaded', () => {
+				AOS.init({
+					duration: 800,
+					once: true,
+					easing: 'ease-out-quad',
+				});
+			});
+		</script>
+
+		<!-- Google Tag Manager -->
+		<script is:inline>
+			(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+			new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+			j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+			'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+			})(window,document,'script','dataLayer','GTM-NP5HB7WF');
+		</script>
+
+		<!-- Firebase Analytics -->
+		<script type="module" is:inline>
+			import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.1/firebase-app.js";
+			import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.1/firebase-analytics.js";
+			const firebaseConfig = {
+				apiKey: "AIzaSyDZmamSihAMED2u9ikcjYAYmRBfYjWxFek",
+				authDomain: "quesello-43a11.firebaseapp.com",
+				projectId: "quesello-43a11",
+				storageBucket: "quesello-43a11.appspot.com",
+				messagingSenderId: "458995143033",
+				appId: "1:458995143033:web:87c663ea0d06e6d3111fa8",
+				measurementId: "G-EKQWBE1ZPP"
+			};
+			const app = initializeApp(firebaseConfig);
+			const analytics = getAnalytics(app);
+		</script>
+	</head>
+	<body>
+		<slot />
+		
+		<!-- Google Tag Manager (noscript) -->
+		<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-NP5HB7WF"
+		height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+	</body>
+</html>
+
+<style is:global>
+	:root {
+		--font-outfit: 'Outfit', sans-serif;
+		--font-inter: 'Inter', sans-serif;
+	}
+</style>
