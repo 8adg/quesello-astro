@@ -22,13 +22,14 @@ const { data: posts } = await supabase
     {posts && posts.length > 0 ? (
       <div style="display: flex; flex-direction: column; gap: 24px;">
         {posts.map(p => (
-          <a href={`/posts/${p.slug}`} style="text-decoration: none; display: block; background: white; border-radius: 24px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.06); border: 1px solid #F1F5F9; transition: transform 0.2s;">
+          <a href={p.categoria ? `/posts/${p.categoria}/${p.slug}` : `/posts/${p.slug}`} style="text-decoration: none; display: block; background: white; border-radius: 24px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.06); border: 1px solid #F1F5F9; transition: transform 0.2s;">
             {p.imagen_url && (
               <img src={p.imagen_url} alt={p.titulo} style="width: 100%; height: 220px; object-fit: cover;" />
             )}
             <div style="padding: 28px;">
-              <h2 style="font-size: 22px; font-weight: 800; color: #1E293B; margin: 0 0 8px 0;">{p.titulo}</h2>
-              {p.subtitulo && <p style="font-size: 15px; color: #FF5E5E; font-weight: 600; margin: 0 0 12px 0;">{p.subtitulo}</p>}
+              {p.categoria && <span style="font-size: 11px; font-weight: 700; color: #FF5E5E; text-transform: uppercase; letter-spacing: 0.05em;">{p.categoria}</span>}
+              <h2 style="font-size: 22px; font-weight: 800; color: #1E293B; margin: 6px 0 8px 0;">{p.titulo}</h2>
+              {p.subtitulo && <p style="font-size: 15px; color: #64748B; font-weight: 600; margin: 0 0 12px 0;">{p.subtitulo}</p>}
               {p.resumen && <p style="font-size: 14px; color: #64748B; margin: 0 0 16px 0; line-height: 1.6;">{p.resumen}</p>}
               <span style="font-size: 13px; color: #FF5E5E; font-weight: 700;">Leer más →</span>
             </div>

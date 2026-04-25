@@ -11,6 +11,7 @@ function slugify(text) {
 
 export default function PostsManager() {
   const [posts, setPosts] = useState([]);
+  const [categorias, setCategorias] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -19,10 +20,15 @@ export default function PostsManager() {
   const [msg, setMsg] = useState(null);
 
   const [form, setForm] = useState({
-    titulo: '', subtitulo: '', resumen: '', imagen_url: '', contenido_md: '', slug: '', publicado: false
+    titulo: '', subtitulo: '', resumen: '', imagen_url: '', contenido_md: '', slug: '', categoria: '', fecha_publicacion: '', publicado: false
   });
 
-  useEffect(() => { loadPosts(); }, []);
+  useEffect(() => { loadPosts(); loadCategorias(); }, []);
+
+  const loadCategorias = async () => {
+    const { data } = await supabase.from('categorias').select('nombre').order('nombre');
+    setCategorias(data || []);
+  };
 
   const loadPosts = async () => {
     setLoading(true);
@@ -32,14 +38,14 @@ export default function PostsManager() {
   };
 
   const resetForm = () => {
-    setForm({ titulo: '', subtitulo: '', resumen: '', imagen_url: '', contenido_md: '', slug: '', publicado: false });
+    setForm({ titulo: '', subtitulo: '', resumen: '', imagen_url: '', contenido_md: '', slug: '', categoria: '', fecha_publicacion: '', publicado: false });
     setEditingId(null);
     setShowForm(false);
     setSlugEdited(false);
   };
 
   const handleEdit = (p) => {
-    setForm({ titulo: p.titulo, subtitulo: p.subtitulo || '', resumen: p.resumen || '', imagen_url: p.imagen_url || '', contenido_md: p.contenido_md || '', slug: p.slug, publicado: p.publicado });
+    setForm({ titulo: p.titulo, subtitulo: p.subtitulo || '', resumen: p.resumen || '', imagen_url: p.imagen_url || '', contenido_md: p.contenido_md || '', slug: p.slug, categoria: p.categoria || '', fecha_publicacion: p.fecha_publicacion || '', publicado: p.publicado });
     setEditingId(p.id);
     setShowForm(true);
   };
@@ -147,6 +153,20 @@ export default function PostsManager() {
               </div>
             </div>
 
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+              <div>
+                <label style={labelStyle}>Categoría</label>
+                <select style={{ ...inputStyle, background: 'white' }} value={form.categoria} onChange={e => setForm(f => ({ ...f, categoria: e.target.value }))}>
+                  <option value="">-- Sin categoría --</option>
+                  {categorias.map(c => <option key={c.nombre} value={c.nombre}>{c.nombre}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={labelStyle}>Fecha de publicación</label>
+                <input type="date" style={inputStyle} value={form.fecha_publicacion} onChange={e => setForm(f => ({ ...f, fecha_publicacion: e.target.value }))} />
+              </div>
+            </div>
+
             <div style={{ marginBottom: '20px' }}>
               <label style={labelStyle}>Subtítulo</label>
               <input style={inputStyle} value={form.subtitulo} onChange={e => setForm(f => ({ ...f, subtitulo: e.target.value }))} />
@@ -196,7 +216,9 @@ export default function PostsManager() {
                 </span>
               </div>
               {p.resumen && <div style={{ fontSize: '13px', color: '#64748B', marginBottom: '5px' }}>{p.resumen.substring(0, 100)}...</div>}
-              <div style={{ fontSize: '11px', color: '#94A3B8' }}>/posts/{p.slug}</div>
+              <div style={{ fontSize: '11px', color: '#94A3B8' }}>
+                {p.categoria ? `/posts/${p.categoria}/${p.slug}` : `/posts/${p.slug}`}
+              </div>
             </div>
             <div style={{ display: 'flex', gap: '10px', marginLeft: '20px' }}>
               <button onClick={() => handleTogglePublicado(p)} style={{ ...btnSecondary, padding: '8px 16px', fontSize: '12px' }}>
