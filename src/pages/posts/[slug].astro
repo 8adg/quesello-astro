@@ -1,0 +1,74 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { supabase } from '../../lib/supabase';
+import { marked } from 'marked';
+
+export async function getStaticPaths() {
+  const { data: posts } = await supabase
+    .from('posts')
+    .select('slug')
+    .eq('publicado', true);
+  
+  return (posts || []).map(p => ({ params: { slug: p.slug } }));
+}
+
+const { slug } = Astro.params;
+const { data: post } = await supabase
+  .from('posts')
+  .select('*')
+  .eq('slug', slug)
+  .eq('publicado', true)
+  .single();
+
+if (!post) return Astro.redirect('/posts');
+
+const contenidoHtml = post.contenido_md ? marked(post.contenido_md) : '';
+---
+
+<Layout 
+  title={`${post.titulo} | Queselló!`} 
+  description={post.resumen || post.subtitulo || post.titulo}
+>
+  <article style="max-width: 780px; margin: 0 auto; padding: 60px 20px; font-family: 'Inter', sans-serif;">
+    
+    <a href="/posts" style="display: inline-flex; align-items: center; gap: 8px; color: #495D56; text-decoration: none; font-weight: 600; font-size: 14px; margin-bottom: 40px;">
+      ← Volver al blog
+    </a>
+
+    {post.imagen_url && (
+      <img src={post.imagen_url} alt={post.titulo} style="width: 100%; max-height: 400px; object-fit: cover; border-radius: 24px; margin-bottom: 40px;" />
+    )}
+
+    <h1 style="font-size: 36px; font-weight: 900; color: #1E293B; margin: 0 0 12px 0; line-height: 1.2;">{post.titulo}</h1>
+    
+    {post.subtitulo && (
+      <p style="font-size: 18px; color: #FF5E5E; font-weight: 600; margin: 0 0 20px 0;">{post.subtitulo}</p>
+    )}
+
+    {post.resumen && (
+      <p style="font-size: 16px; color: #64748B; margin: 0 0 40px 0; line-height: 1.7; padding-bottom: 30px; border-bottom: 1px solid #F1F5F9;">{post.resumen}</p>
+    )}
+
+    <div class="post-content" set:html={contenidoHtml} />
+
+  </article>
+</Layout>
+
+<style is:global>
+  .post-content {
+    font-size: 16px;
+    line-height: 1.8;
+    color: #334155;
+    font-family: 'Inter', sans-serif;
+  }
+  .post-content h2 { font-size: 26px; font-weight: 800; color: #1E293B; margin: 40px 0 16px; }
+  .post-content h3 { font-size: 20px; font-weight: 700; color: #1E293B; margin: 30px 0 12px; }
+  .post-content p  { margin: 0 0 20px; }
+  .post-content a  { color: #FF5E5E; font-weight: 600; }
+  .post-content ul, .post-content ol { padding-left: 24px; margin: 0 0 20px; }
+  .post-content li { margin-bottom: 8px; }
+  .post-content img { width: 100%; border-radius: 16px; margin: 24px 0; }
+  .post-content blockquote { border-left: 4px solid #FF5E5E; padding: 12px 20px; background: #FFF5F5; border-radius: 0 12px 12px 0; margin: 24px 0; color: #495D56; font-style: italic; }
+  .post-content code { background: #F1F5F9; padding: 2px 8px; border-radius: 6px; font-size: 14px; }
+  .post-content pre  { background: #1E293B; color: #E2E8F0; padding: 20px; border-radius: 16px; overflow-x: auto; margin: 24px 0; }
+</style>

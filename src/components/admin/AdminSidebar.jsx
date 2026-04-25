@@ -7,6 +7,7 @@ const MENU_ITEMS = [
   { id: 'categorias', label: 'Categorías', icon: 'layout-grid', path: '/admin/categorias' },
   { id: 'productos', label: 'Productos', icon: 'stamp', path: '/admin/productos' },
   { id: 'sliders', label: 'Menús sliders', icon: 'list', path: '/admin/sliders' },
+  { id: 'posts', label: 'Posts', icon: 'newspaper', path: '/admin/posts' },
   { id: 'franquicias', label: 'Franquicias', icon: 'store', path: '/admin/franquicias' },
   { id: 'config', label: 'Configuración', icon: 'settings', path: '/admin/configuracion' },
 ];
@@ -43,6 +44,7 @@ export default function AdminSidebar({ activeId = 'dashboard' }) {
       'layout-grid': 'lucide:shapes',
       'stamp': 'mdi:stamper',
       'list': 'lucide:list',
+      'newspaper': 'lucide:newspaper',
       'store': 'lucide:store',
       'settings': 'lucide:settings',
     };

@@ -1,0 +1,8 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import PostsManager from '../../../components/admin/PostsManager';
+---
+
+<AdminLayout title="Posts | Queselló Admin" activeId="posts">
+  <PostsManager client:load />
+</AdminLayout>
