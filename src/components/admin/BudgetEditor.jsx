@@ -119,14 +119,14 @@ const BudgetEditor = ({ editingOrder, onSave, onCancel }) => {
     } catch (err) { alert(err.message); } finally { setLoading(false); }
   };
 
-  const inputStyle = { width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid #ddd', marginBottom: '10px', fontSize: '14px', background: 'white' };
+  const inputStyle = { width: '100%', padding: '12px 14px', borderRadius: '12px', border: '2px solid #F1F5F9', marginBottom: '10px', fontSize: '14px', fontFamily: 'Inter', background: 'white', boxSizing: 'border-box', outline: 'none' };
 
   return (
-    <div style={{ display: 'flex', gap: '20px', maxWidth: '1100px', margin: '0 auto', background: '#f1f5f9', padding: '20px', borderRadius: '25px', height: '90vh' }}>
+    <div style={{ display: 'flex', gap: '20px', maxWidth: '1100px', margin: '0 auto', background: '#F4F1E1', padding: '20px', borderRadius: '30px', height: '90vh' }}>
       
       {/* COLUMNA IZQUIERDA: CATÁLOGO */}
-      <div style={{ flex: 1, background: 'white', borderRadius: '20px', padding: '15px', display: 'flex', flexDirection: 'column', border: '1px solid #e2e8f0' }}>
-        <h3 style={{ marginBottom: '10px', fontSize: '16px', fontWeight: 900 }}>CATÁLOGO</h3>
+      <div style={{ flex: 1, background: 'white', borderRadius: '22px', padding: '18px', display: 'flex', flexDirection: 'column', border: '1px solid #F1F5F9' }}>
+        <h3 style={{ marginBottom: '10px', fontSize: '13px', fontWeight: 900, color: '#998E55', letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: 'Inter' }}>Catálogo</h3>
         <input type="text" placeholder="BUSCAR PRODUCTO..." value={busquedaProd} onChange={e => setBusquedaProd(e.target.value)} style={inputStyle} />
         <div style={{ flex: 1, overflowY: 'auto', paddingRight: '5px' }}>
           {catalogo.filter(p => p.descripcion.toLowerCase().includes(busquedaProd.toLowerCase())).map(p => (
@@ -134,19 +134,19 @@ const BudgetEditor = ({ editingOrder, onSave, onCancel }) => {
               <span style={{ fontSize: '12px', fontWeight: 700 }}>{p.descripcion.toUpperCase()}</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <span style={{ fontWeight: 800 }}>${p.precio}</span>
-                <button onClick={() => agregarAlCarrito(p)} style={{ background: '#0f172a', color: 'white', border: 'none', borderRadius: '8px', padding: '5px 12px', cursor: 'pointer' }}>+</button>
+                <button onClick={() => agregarAlCarrito(p)} style={{ background: '#FF5E5E', color: 'white', border: 'none', borderRadius: '10px', padding: '5px 14px', cursor: 'pointer', fontWeight: 800, fontFamily: 'Inter' }}>+</button>
               </div>
             </div>
           ))}
           <button onClick={() => {
             const val = prompt("Precio para manual:", "0");
             if(val) agregarAlCarrito({descripcion: busquedaProd || "VARIO", precio: parseFloat(val)});
-          }} style={{ width: '100%', padding: '10px', marginTop: '10px', background: '#3b82f6', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 800 }}>+ PRODUCTO VARIO</button>
+          }} style={{ width: '100%', padding: '10px', marginTop: '10px', background: '#F4F1E1', color: '#495D56', border: 'none', borderRadius: '12px', fontWeight: 800, fontFamily: 'Inter', cursor: 'pointer' }}>+ PRODUCTO VARIO</button>
         </div>
       </div>
 
       {/* COLUMNA DERECHA: PEDIDO */}
-      <div style={{ flex: 1.2, background: 'white', borderRadius: '20px', padding: '20px', display: 'flex', flexDirection: 'column', border: '1px solid #e2e8f0' }}>
+      <div style={{ flex: 1.2, background: 'white', borderRadius: '22px', padding: '20px', display: 'flex', flexDirection: 'column', border: '1px solid #F1F5F9' }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
           <input type="text" placeholder="CLIENTE" value={cliente} onChange={e => setCliente(e.target.value)} style={{ ...inputStyle, fontWeight: 'bold' }} />
           <input type="text" placeholder="FECHA" value={fecha} onChange={e => setFecha(e.target.value)} style={inputStyle} />
@@ -171,11 +171,11 @@ const BudgetEditor = ({ editingOrder, onSave, onCancel }) => {
         </div>
 
         {/* DESCUENTOS */}
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '15px', background: '#f1f5f9', padding: '10px', borderRadius: '12px' }}>
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '15px', background: '#F4F1E1', padding: '10px', borderRadius: '14px' }}>
           <input type="text" placeholder="MOTIVO DESC." value={descLabel} onChange={e => setDescLabel(e.target.value)} style={{ flex: 1, padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
           <input type="number" placeholder="VALOR" value={descValor} onChange={e => setDescValor(e.target.value)} style={{ width: '70px', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
           <select value={descTipo} onChange={e => setDescTipo(e.target.value)} style={{ padding: '8px', borderRadius: '8px' }}><option value="$">$</option><option value="%">%</option></select>
-          <button onClick={aplicarDescuento} style={{ background: '#3b82f6', color: 'white', border: 'none', borderRadius: '8px', padding: '0 12px', fontWeight: 800 }}>OK</button>
+          <button onClick={aplicarDescuento} style={{ background: '#FF5E5E', color: 'white', border: 'none', borderRadius: '10px', padding: '0 14px', fontWeight: 800, fontFamily: 'Inter', cursor: 'pointer' }}>OK</button>
         </div>
 
         {/* ESTADOS */}
@@ -193,13 +193,13 @@ const BudgetEditor = ({ editingOrder, onSave, onCancel }) => {
           </select>
         </div>
 
-        <div style={{ background: '#0f172a', padding: '15px', borderRadius: '15px', textAlign: 'center', color: 'white', marginBottom: '15px' }}>
-          <div style={{ fontSize: '24px', fontWeight: 900 }}>TOTAL: $ {total.toLocaleString()}</div>
+        <div style={{ background: '#1E293B', padding: '15px', borderRadius: '18px', textAlign: 'center', color: 'white', marginBottom: '15px' }}>
+          <div style={{ fontSize: '22px', fontWeight: 900, fontFamily: 'Inter', letterSpacing: '-0.02em' }}>TOTAL: $ {total.toLocaleString()}</div>
         </div>
 
         <div style={{ display: 'flex', gap: '10px' }}>
-          <button onClick={onCancel} style={{ flex: 1, padding: '12px', borderRadius: '10px', border: '1px solid #ddd', fontWeight: 800 }}>CANCELAR</button>
-          <button onClick={handleGuardar} disabled={loading} style={{ flex: 2, padding: '12px', background: '#0f172a', color: 'white', borderRadius: '10px', border: 'none', fontWeight: 800 }}>
+          <button onClick={onCancel} style={{ flex: 1, padding: '12px', borderRadius: '14px', border: 'none', fontWeight: 800, background: '#F4F1E1', color: '#495D56', fontFamily: 'Inter', cursor: 'pointer' }}>CANCELAR</button>
+          <button onClick={handleGuardar} disabled={loading} style={{ flex: 2, padding: '12px', background: '#FF5E5E', color: 'white', borderRadius: '14px', border: 'none', fontWeight: 800, fontFamily: 'Inter', cursor: 'pointer' }}>
             {loading ? "..." : (editingOrder?.numero?.startsWith("W") ? "APROBAR WEB" : "GUARDAR")}
           </button>
         </div>
