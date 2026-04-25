@@ -35,3 +35,6 @@ firebaserc.backup
 # Local env files (por si acaso)
 .env.local
 .env.development
+PLAN_SLIDERS_MULTITIPO.md
+.gitignore
+public/ds/container_genenral.png
