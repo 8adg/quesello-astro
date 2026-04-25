@@ -11,7 +11,7 @@ export async function getStaticPaths() {
     .not('categoria', 'is', null);
   
   return (posts || []).map(p => ({
-    params: { categoria: p.categoria, slug: p.slug }
+    params: { categoria: p.categoria.toLowerCase(), slug: p.slug }
   }));
 }
 

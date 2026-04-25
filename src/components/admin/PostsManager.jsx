@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
 
 const GITHUB_OWNER = '8adg';
@@ -19,6 +19,9 @@ export default function PostsManager() {
   const [editingId, setEditingId] = useState(null);
   const [msg, setMsg] = useState(null);
 
+  const dragPost = useRef();
+  const dragOverPost = useRef();
+
   const [form, setForm] = useState({
     titulo: '', subtitulo: '', resumen: '', imagen_url: '', contenido_md: '', slug: '', categoria: '', fecha_publicacion: '', publicado: false
   });
@@ -32,7 +35,7 @@ export default function PostsManager() {
 
   const loadPosts = async () => {
     setLoading(true);
-    const { data } = await supabase.from('posts').select('*').order('id', { ascending: false });
+    const { data } = await supabase.from('posts').select('*').order('orden', { ascending: true }).order('id', { ascending: false });
     setPosts(data || []);
     setLoading(false);
   };
@@ -77,12 +80,16 @@ export default function PostsManager() {
     if (!form.titulo || !form.slug) return alert('Título y slug son obligatorios');
     setSaving(true);
     try {
-      const payload = { ...form, franquicia_id: 1 };
+      const payload = { ...form, franquicia_id: 1, categoria: form.categoria ? form.categoria.toLowerCase() : null };
+      let dbError;
       if (editingId) {
-        await supabase.from('posts').update(payload).eq('id', editingId);
+        const { error } = await supabase.from('posts').update(payload).eq('id', editingId);
+        dbError = error;
       } else {
-        await supabase.from('posts').insert(payload);
+        const { error } = await supabase.from('posts').insert(payload);
+        dbError = error;
       }
+      if (dbError) throw dbError;
       if (form.publicado) {
         setMsg({ type: 'success', text: '✅ Guardado. Disparando rebuild...' });
         await triggerDeploy();
@@ -114,8 +121,25 @@ export default function PostsManager() {
     loadPosts();
   };
 
+  const handleDragEnd = async () => {
+    const from = dragPost.current;
+    const to = dragOverPost.current;
+    if (from === undefined || to === undefined || from === to) return;
+    const reordered = [...posts];
+    const [moved] = reordered.splice(from, 1);
+    reordered.splice(to, 0, moved);
+    setPosts(reordered);
+    dragPost.current = undefined;
+    dragOverPost.current = undefined;
+    const updates = reordered.map((p, idx) => ({ id: p.id, orden: idx }));
+    for (const u of updates) {
+      await supabase.from('posts').update({ orden: u.orden }).eq('id', u.id);
+    }
+  };
+
   // Estilos base del design system
-  const cardStyle = { background: 'white', borderRadius: '35px', padding: '35px', boxShadow: '0 4px 25px rgba(0,0,0,0.03)', border: '1px solid #f0f0f0', marginBottom: '20px' };
+  const cardStyle = { background: 'white', borderRadius: '28px', padding: '35px', boxShadow: '0 4px 25px rgba(0,0,0,0.03)', border: '1px solid #f0f0f0', marginBottom: '20px' };
+  const rowStyle  = { background: 'white', borderRadius: '28px', padding: '22px 30px', border: '1px solid #f8f8f8', marginBottom: '15px', display: 'flex', alignItems: 'center' };
   const inputStyle = { width: '100%', padding: '16px', borderRadius: '14px', border: '2px solid #F1F5F9', fontSize: '15px', fontFamily: 'Inter', outline: 'none', boxSizing: 'border-box' };
   const labelStyle = { display: 'block', fontSize: '12px', fontWeight: 700, color: '#998E55', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' };
   const btnPrimary = { background: '#FF5E5E', color: 'white', border: 'none', padding: '14px 28px', borderRadius: '18px', fontWeight: 700, cursor: 'pointer', fontFamily: 'Inter', fontSize: '14px' };
@@ -207,25 +231,37 @@ export default function PostsManager() {
         <div style={{ textAlign: 'center', padding: '60px', color: '#94A3B8' }}>No hay posts todavía.</div>
       ) : (
         posts.map(p => (
-          <div key={p.id} style={{ ...cardStyle, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div key={p.id}
+            draggable
+            onDragStart={() => { dragPost.current = posts.indexOf(p); }}
+            onDragEnter={() => { dragOverPost.current = posts.indexOf(p); }}
+            onDragEnd={handleDragEnd}
+            onDragOver={e => e.preventDefault()}
+            style={{ ...rowStyle, cursor: 'move' }}>
+            <div style={{ marginRight: '16px', color: '#E2E8F0', flexShrink: 0 }}>
+              <img src="https://api.iconify.design/lucide:grip-vertical.svg?color=%23CBD5E1" style={{ width: '20px', display: 'block' }} alt="" />
+            </div>
             <div style={{ flex: 1 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '5px' }}>
-                <span style={{ fontSize: '18px', fontWeight: 800, color: '#1E293B' }}>{p.titulo}</span>
-                <span style={{ fontSize: '11px', padding: '3px 10px', borderRadius: '20px', fontWeight: 700, background: p.publicado ? '#D1FAE5' : '#F1F5F9', color: p.publicado ? '#065F46' : '#64748B' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
+                <span style={{ fontSize: '17px', fontWeight: 800, color: '#1E293B' }}>{p.titulo}</span>
+                <span style={{ fontSize: '10px', padding: '3px 10px', borderRadius: '20px', fontWeight: 700, background: p.publicado ? '#D1FAE5' : '#F1F5F9', color: p.publicado ? '#065F46' : '#64748B' }}>
                   {p.publicado ? 'PUBLICADO' : 'BORRADOR'}
                 </span>
               </div>
-              {p.resumen && <div style={{ fontSize: '13px', color: '#64748B', marginBottom: '5px' }}>{p.resumen.substring(0, 100)}...</div>}
-              <div style={{ fontSize: '11px', color: '#94A3B8' }}>
+              <div style={{ fontSize: '12px', color: '#94A3B8' }}>
                 {p.categoria ? `/posts/${p.categoria}/${p.slug}` : `/posts/${p.slug}`}
               </div>
             </div>
-            <div style={{ display: 'flex', gap: '10px', marginLeft: '20px' }}>
-              <button onClick={() => handleTogglePublicado(p)} style={{ ...btnSecondary, padding: '8px 16px', fontSize: '12px' }}>
-                {p.publicado ? 'DESPUBLICAR' : 'PUBLICAR'}
+            <div style={{ display: 'flex', gap: '4px', marginLeft: '20px', alignItems: 'center' }}>
+              <button onClick={() => handleTogglePublicado(p)} title={p.publicado ? 'Despublicar' : 'Publicar'} style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '5px' }}>
+                <img src={`https://api.iconify.design/lucide:${p.publicado ? 'eye-off' : 'send'}.svg?color=%234b3b28`} style={{ width: '22px' }} alt={p.publicado ? 'Despublicar' : 'Publicar'} />
               </button>
-              <button onClick={() => handleEdit(p)} style={{ background: 'none', border: '1px solid #E2E8F0', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 700, fontSize: '12px' }}>EDITAR</button>
-              <button onClick={() => handleDelete(p.id)} style={{ background: 'none', border: '1px solid #FEE2E2', color: '#DC2626', padding: '8px 16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 700, fontSize: '12px' }}>DROP</button>
+              <button onClick={() => handleEdit(p)} title="Editar" style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '5px' }}>
+                <img src="https://api.iconify.design/lucide:edit-3.svg?color=%231a202c" style={{ width: '22px' }} alt="Editar" />
+              </button>
+              <button onClick={() => handleDelete(p.id)} title="Eliminar" style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '5px' }}>
+                <img src="https://api.iconify.design/lucide:trash-2.svg?color=%231a202c" style={{ width: '22px' }} alt="Eliminar" />
+              </button>
             </div>
           </div>
         ))

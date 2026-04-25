@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
 
-const iconEdit = <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>;
-const iconDelete = <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>;
-const iconDrag = <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M7 8H17M7 12H17M7 16H17"/></svg>;
+const iconEdit = <img src="https://api.iconify.design/lucide:edit-3.svg?color=%231a202c" style={{ width: '22px' }} alt="Editar" />;
+const iconDelete = <img src="https://api.iconify.design/lucide:trash-2.svg?color=%231a202c" style={{ width: '22px' }} alt="Eliminar" />;
+const iconDrag = <img src="https://api.iconify.design/lucide:grip-vertical.svg?color=%23CBD5E1" style={{ width: '20px' }} alt="" />;
 
 export default function MenuSliderManager() {
   const [menus, setMenus] = useState([]);
@@ -239,9 +239,9 @@ export default function MenuSliderManager() {
                 {m.config?.autoplay && <span style={{ fontSize: '10px', background: '#ECFDF5', color: '#059669', padding: '3px 8px', borderRadius: '5px' }}>Autoplay ON</span>}
               </div>
             </div>
-            <div style={{ display: 'flex', gap: '15px' }}>
-              <button onClick={() => { setFormData(m); setEditingId(m.id); setShowForm(true); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#1E293B' }}>{iconEdit}</button>
-              <button onClick={() => saveAllToDB(menus.filter(x => x.id !== m.id))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#1E293B' }}>{iconDelete}</button>
+            <div style={{ display: 'flex', gap: '4px' }}>
+              <button onClick={() => { setFormData(m); setEditingId(m.id); setShowForm(true); }} title="Editar" style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '5px' }}>{iconEdit}</button>
+              <button onClick={() => saveAllToDB(menus.filter(x => x.id !== m.id))} title="Eliminar" style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '5px' }}>{iconDelete}</button>
             </div>
           </div>
         ))}
