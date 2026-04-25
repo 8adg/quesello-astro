@@ -99,7 +99,7 @@ export default function OrderTracker() {
   const statusCfg = orderData ? getStatusConfig(orderData.estado) : null;
 
   return (
-    <section style={{ width: "100%", maxWidth: "420px", display: "flex", flexDirection: "column", alignItems: "center", padding: "0 20px" }}>
+    <section style={{ width: "100%", maxWidth: "420px", display: "flex", flexDirection: "column", alignItems: "center", padding: "0px" }}>
       <div style={{ textAlign: "center", color: "var(--primary)", marginBottom: "30px" }}>
         <h2 style={{ fontWeight: 700, margin: "24px", color: "#FF5555", fontFamily: "var(--font-outfit)" }}>Estado de mi pedido</h2>
         <p style={{ margin: "0", fontSize: "16px", opacity: 0.8, color: "#495D56" }}>Ingresá el número de código o escanéalo con tu cámara.</p>
