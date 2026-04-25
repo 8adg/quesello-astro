@@ -14,6 +14,7 @@ export default function PostsManager() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [slugEdited, setSlugEdited] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [msg, setMsg] = useState(null);
 
@@ -34,6 +35,7 @@ export default function PostsManager() {
     setForm({ titulo: '', subtitulo: '', resumen: '', imagen_url: '', contenido_md: '', slug: '', publicado: false });
     setEditingId(null);
     setShowForm(false);
+    setSlugEdited(false);
   };
 
   const handleEdit = (p) => {
@@ -43,7 +45,12 @@ export default function PostsManager() {
   };
 
   const handleTituloChange = (val) => {
-    setForm(f => ({ ...f, titulo: val, slug: f.slug || slugify(val) }));
+    setForm(f => ({ ...f, titulo: val, slug: slugEdited ? f.slug : slugify(val) }));
+  };
+
+  const handleSlugChange = (val) => {
+    setSlugEdited(true);
+    setForm(f => ({ ...f, slug: slugify(val) }));
   };
 
   const triggerDeploy = async () => {
@@ -136,7 +143,7 @@ export default function PostsManager() {
               </div>
               <div>
                 <label style={labelStyle}>Slug (URL) *</label>
-                <input style={inputStyle} value={form.slug} onChange={e => setForm(f => ({ ...f, slug: slugify(e.target.value) }))} required />
+                <input style={inputStyle} value={form.slug} onChange={e => handleSlugChange(e.target.value)} required />
               </div>
             </div>
 
