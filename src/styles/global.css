@@ -1,5 +1,13 @@
 @import "tailwindcss";
 
+@font-face {
+    font-family: 'Quesello'; 
+    src: url('/fuentes/quesello.woff2') format('woff2'); 
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
 @theme {
   --font-inter: "Inter Variable", sans-serif;
   --font-outfit: "Outfit Variable", sans-serif;
