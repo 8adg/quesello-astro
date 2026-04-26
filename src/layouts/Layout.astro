@@ -12,7 +12,7 @@ const {
 	title = "Queselló! Tienda Taller", 
 	description = "Fabricación y venta de sellos de goma para impresión artesanal. Encontrá sellos personalizados, almohadillas de tinta y más.",
 	image = "https://quesello.com.ar/site-image.png",
-	canonicalUrl = Astro.url.href
+	canonicalUrl = new URL(Astro.url.pathname, Astro.site).href
 } = Astro.props;
 ---
 
