@@ -8,11 +8,10 @@ export default function BudgetManager() {
   const [view, setView] = useState('list'); // 'list' | 'editor'
   const [orders, setOrders] = useState([]);
   const [editingOrder, setEditingOrder] = useState(null);
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [printingOrder, setPrintingOrder] = useState(null);
-  
-  // Estados para Modal de Borrado y Avisos
   const [deletingId, setDeletingId] = useState(null);
   const [toast, setToast] = useState(null);
 
@@ -60,10 +59,33 @@ export default function BudgetManager() {
     showToast("Pedido guardado con éxito");
     loadOrders();
   };
+  
+  const months = [
+    { id: 0, name: "ENERO" }, { id: 1, name: "FEBRERO" }, { id: 2, name: "MARZO" },
+    { id: 3, name: "ABRIL" }, { id: 4, name: "MAYO" }, { id: 5, name: "JUNIO" },
+    { id: 6, name: "JULIO" }, { id: 7, name: "AGOSTO" }, { id: 8, name: "SEPTIEMBRE" },
+    { id: 9, name: "OCTUBRE" }, { id: 10, name: "NOVIEMBRE" }, { id: 11, name: "DICIEMBRE" }
+  ];
 
   const filteredOrders = orders.filter(o => {
     const term = searchTerm.toLowerCase();
-    return o.cliente?.toLowerCase().includes(term) || o.numero?.toString().includes(term);
+    const matchesSearch = o.cliente?.toLowerCase().includes(term) || o.numero?.toString().includes(term);
+    
+    if (selectedMonth === "ALL") return matchesSearch;
+
+    if (o.fecha) {
+      const parts = o.fecha.split('/');
+      if (parts.length === 3) {
+        const m = parseInt(parts[1]) - 1;
+        return matchesSearch && m === selectedMonth;
+      }
+      // Fallback para ISO
+      const d = new Date(o.fecha);
+      if (!isNaN(d.getTime())) {
+        return matchesSearch && d.getMonth() === selectedMonth;
+      }
+    }
+    return matchesSearch;
   });
 
   if (view === 'editor') {
@@ -88,8 +110,37 @@ export default function BudgetManager() {
 
       <hr style={{ border: 'none', height: '2px', background: '#aba9a4', opacity: 0.2, margin: '24px 0' }} />
 
-      <div style={{ display: 'flex', gap: '15px', marginBottom: '25px' }}>
+      <div style={{ display: 'flex', gap: '15px', marginBottom: '25px', alignItems: 'center' }}>
         <input type="text" placeholder="Buscar presupuesto..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} style={{ flex: 1, padding: '14px 20px', borderRadius: '18px', border: '2px solid #EDF2F7', background: 'white', fontSize: '15px', outline: 'none' }} />
+        
+        {/* SELECTOR DE MES */}
+        <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+          <select 
+            value={selectedMonth} 
+            onChange={(e) => setSelectedMonth(e.target.value === "ALL" ? "ALL" : parseInt(e.target.value))}
+            style={{ 
+              appearance: 'none',
+              background: '#F4F1E1', 
+              color: '#991B1B', 
+              padding: '14px 45px 14px 25px', 
+              borderRadius: '22px', 
+              border: 'none',
+              fontWeight: 800, 
+              fontSize: '16px', 
+              cursor: 'pointer',
+              outline: 'none',
+              fontFamily: 'Inter',
+              textAlign: 'center'
+            }}
+          >
+            <option value="ALL">TODOS LOS MESES</option>
+            {months.map(m => (
+              <option key={m.id} value={m.id}>{m.name}</option>
+            ))}
+          </select>
+          <div style={{ position: 'absolute', right: '20px', pointerEvents: 'none', color: '#991B1B', fontSize: '10px', opacity: 0.5 }}>▼</div>
+        </div>
+
         <div style={{ background: '#F4F1E1', padding: '14px 25px', borderRadius: '18px', color: '#4b3b28', fontWeight: 800, fontSize: '16px', display: 'flex', alignItems: 'center' }}>
           TOTAL VENTAS: $ {filteredOrders.reduce((acc, o) => acc + (o.total || 0), 0).toLocaleString('es-AR')}
         </div>
