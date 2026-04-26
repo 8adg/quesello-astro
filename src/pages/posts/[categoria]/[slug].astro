@@ -34,6 +34,7 @@ const contenidoHtml = post.contenido_md ? marked(post.contenido_md) : "";
 <Layout
   title={`${post.titulo} | Queselló!`}
   description={post.resumen || post.subtitulo || post.titulo}
+  image={post.imagen_url}
 >
   <Header />
   <article
