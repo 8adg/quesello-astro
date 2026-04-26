@@ -1,0 +1,80 @@
+---
+/**
+ * DesktopGate.astro
+ * Bloqueo de escritorio mediante CSS puro para evitar el delay de hidratación de React.
+ */
+const qrUrl = "https://quesello.com.ar";
+---
+
+<div class="gate-container">
+  <!-- Pantalla para Desktop -->
+  <div class="desktop-warning">
+    <img src="/logo.svg" alt="Queselló" class="gate-logo" />
+    <p class="gate-text">Escaneá con tu teléfono celular:</p>
+    <div class="qr-box">
+      <img
+        src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(qrUrl)}`}
+        alt="QR Queselló"
+        width="220"
+        height="220"
+      />
+    </div>
+  </div>
+
+  <!-- Contenido para Mobile -->
+  <div class="mobile-content">
+    <slot />
+  </div>
+</div>
+
+<style>
+  .gate-container {
+    width: 100%;
+  }
+
+  .desktop-warning {
+    display: none; /* Por defecto oculto en mobile */
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 32px;
+    min-height: 100vh;
+    background: #EDE8D3;
+    padding: 40px;
+    font-family: 'Inter', sans-serif;
+    text-align: center;
+  }
+
+  .gate-logo {
+    height: 64px;
+    width: auto;
+  }
+
+  .gate-text {
+    color: #495D56;
+    font-size: 20px;
+    font-weight: 600;
+    margin: 0;
+  }
+
+  .qr-box {
+    background: white;
+    border-radius: 24px;
+    padding: 24px;
+    box-shadow: 0 8px 32px rgba(73, 93, 86, 0.12);
+  }
+
+  .mobile-content {
+    display: block; /* Visible por defecto */
+  }
+
+  /* Si la pantalla es ancha (Desktop), invertimos */
+  @media (min-width: 768px) {
+    .desktop-warning {
+      display: flex;
+    }
+    .mobile-content {
+      display: none;
+    }
+  }
+</style>

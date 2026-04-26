@@ -3,6 +3,7 @@
  * Componente Header
  * Identidad visual principal (Logo).
  */
+const { loading = "lazy", priority = "low" } = Astro.props;
 ---
 
 <header class="header-main-wrapper">
@@ -14,6 +15,8 @@
         width="220"
         height="60"
         class="logo-img"
+        loading={loading}
+        fetchpriority={priority}
       />
     </a>
   </div>

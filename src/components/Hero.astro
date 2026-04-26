@@ -1,4 +1,5 @@
 ---
+const { loading = "lazy", priority = "low" } = Astro.props;
 ---
 <section class="section" style="overflow: hidden;">
   <h1 id="hero-title" style="transform-origin: center top; will-change: transform;">
@@ -11,6 +12,8 @@
       width="400"
       height="400"
       style="width: 100%; maxWidth: 380px; height: auto; margin-bottom: 0px;"
+      loading={loading}
+      fetchpriority={priority}
     />
   </div>
   <button

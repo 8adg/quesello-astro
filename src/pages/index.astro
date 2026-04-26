@@ -1,6 +1,6 @@
 ---
 import Layout from "../layouts/Layout.astro";
-import DesktopGate from "../components/DesktopGate.jsx";
+import DesktopGate from "../components/DesktopGate.astro";
 import TopNav from "../components/TopNav.astro";
 import Header from "../components/Header.astro";
 import Hero from "../components/Hero.astro";
@@ -25,14 +25,14 @@ try {
 ---
 
 <Layout>
-	<DesktopGate client:load>
+	<DesktopGate>
 		<main class="w-full flex flex-col items-center">
 			
             <TopNav franchise={franchise} />
             
 			<div class="container text-center">
-				<Header />
-				<Hero />
+				<Header loading="eager" priority="high" />
+				<Hero loading="eager" priority="high" />
 				<Franquicia />
 			</div>
 			
