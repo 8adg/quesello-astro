@@ -4,11 +4,15 @@ import '../styles/global.css';
 interface Props {
 	title?: string;
 	description?: string;
+	image?: string;
+	canonicalUrl?: string;
 }
 
 const { 
 	title = "Queselló! Tienda Taller", 
-	description = "Fabricación y venta de sellos de goma para impresión artesanal. Encontrá sellos personalizados, almohadillas de tinta y más." 
+	description = "Fabricación y venta de sellos de goma para impresión artesanal. Encontrá sellos personalizados, almohadillas de tinta y más.",
+	image = "https://quesello.com.ar/site-image.png",
+	canonicalUrl = Astro.url.href
 } = Astro.props;
 ---
 
@@ -25,17 +29,18 @@ const {
 		
 		<title>{title}</title>
 		<meta name="description" content={description} />
+		<link rel="canonical" href={canonicalUrl} />
 		<meta name="keywords" content="sellos personalizados,sellos mar del plata, sellos personalizados mar del plata, sellos de goma, impresión artesanal, block printing, estampado manual, almohadillas de tinta, fabricación de sellos" />
 		<meta name="author" content="Queselló! Tienda Taller de impresión artesanal, Matias Ochoa Payva" />
 		
 		<!-- Open Graph -->
 		<meta property="og:title" content={title} />
 		<meta property="og:description" content={description} />
-		<meta property="og:url" content="https://quesello.com.ar" />
+		<meta property="og:url" content={canonicalUrl} />
 		<meta property="og:site_name" content="Queselló! Tienda Taller" />
-		<meta property="og:image" content="https://quesello.com.ar/site-image.png" />
+		<meta property="og:image" content={image} />
 		<meta property="og:locale" content="es_AR" />
-		<meta property="og:type" content="website" />
+		<meta property="og:type" content="article" />
 
 		<!-- PWA / Mobile -->
 		<link rel="manifest" href="/manifest.json" />
