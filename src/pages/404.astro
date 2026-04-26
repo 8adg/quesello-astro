@@ -1,0 +1,51 @@
+---
+import Layout from "../layouts/Layout.astro";
+import Footer from "../components/Footer.astro";
+
+const title = "404 - Página no encontrada - Queselló!";
+---
+
+<Layout title={title}>
+    <div style="display: flex; flex-direction: column; min-height: 100vh;">
+        <main class="container" style="flex: 1; display: flex; flex-direction: column; padding-top: 40px;">
+            
+            {/* LOGO de Quesello */}
+            <header style="margin-bottom: 20px; width: 100%; display: flex; justify-content: center;">
+                <img
+                    src="/logo.svg"
+                    alt="Queselló"
+                    style="height: 48px; width: auto;"
+                />
+            </header>
+
+            {/* CONTENIDO VERTICALMENTE CENTRADO */}
+            <section style="flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; padding-top: 40px;">
+
+                {/* 404 y Texto explicativo */}
+                <div style="text-align: center; color: var(--primary); margin-bottom: 30px;">
+                    <h1 style="font-size: 64px; font-weight: 700; margin: 0 0 20px 0; color: var(--primary);">404</h1>
+                    <p style="margin: 0; font-size: 18px; font-weight: bold; color: var(--primary); line-height: 1.4;">
+                        No te preocupes! ellos también van a<br />
+                        encontrar al michi. Y vos lo que buscás.
+                    </p>
+                </div>
+
+                {/* Imagen central de 404.png */}
+                <img
+                    src="/404.png"
+                    alt="404 - Buscando al michi"
+                    style="width: 100%; maxWidth: 450px; height: auto; object-fit: contain; margin-bottom: 40px;"
+                />
+
+                {/* Botón Inicio */}
+                <a href="/" style="text-decoration: none; display: flex; justify-content: center;">
+                    <button class="btn" style="min-width: 200px;">
+                        Inicio
+                    </button>
+                </a>
+            </section>
+        </main>
+
+        <Footer />
+    </div>
+</Layout>
