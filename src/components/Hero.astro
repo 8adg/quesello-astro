@@ -44,19 +44,7 @@ const { loading = "lazy", priority = "low" } = Astro.props;
   }
 
   function init() {
-    const heroTitle = document.getElementById('hero-title');
-    if (heroTitle) {
-      attachParallax();
-    } else {
-      // Esperamos a que React (DesktopGate) hidrate el contenido
-      const observer = new MutationObserver((_, obs) => {
-        if (document.getElementById('hero-title')) {
-          attachParallax();
-          obs.disconnect();
-        }
-      });
-      observer.observe(document.body, { childList: true, subtree: true });
-    }
+    attachParallax();
   }
 
   document.addEventListener('DOMContentLoaded', init);

@@ -27,6 +27,7 @@ const {
 		<link rel="apple-touch-icon" href="/iconos/512.png" />
 		<meta name="generator" content={Astro.generator} />
 		
+		{image && <link rel="preload" as="image" href={image} fetchpriority="high" />}
 		<title>{title}</title>
 		<meta name="description" content={description} />
 		<link rel="canonical" href={canonicalUrl} />
