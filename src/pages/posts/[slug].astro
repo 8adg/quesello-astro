@@ -92,6 +92,12 @@ const contenidoHtml = post.contenido_md ? marked(post.contenido_md) : "";
     color: #334155;
     font-family: "Inter", sans-serif;
   }
+
+  article h1,
+  .post-content h1 {
+    text-align: left !important;
+  }
+  article h2,
   .post-content h2 {
     font-size: 26px;
     font-weight: 800;
@@ -99,6 +105,7 @@ const contenidoHtml = post.contenido_md ? marked(post.contenido_md) : "";
     margin: 40px 0 16px;
     text-align: left !important;
   }
+  article h3,
   .post-content h3 {
     font-size: 20px;
     font-weight: 700;
@@ -106,6 +113,7 @@ const contenidoHtml = post.contenido_md ? marked(post.contenido_md) : "";
     margin: 30px 0 12px;
     text-align: left !important;
   }
+  article p,
   .post-content p {
     margin: 0 0 20px;
     text-align: left !important;
@@ -128,13 +136,42 @@ const contenidoHtml = post.contenido_md ? marked(post.contenido_md) : "";
     margin: 24px 0;
   }
   .post-content blockquote {
-    border-left: 4px solid #ff5e5e;
-    padding: 12px 20px;
+    background: #fef9c3;
+    padding: 35px 40px;
+    margin: 45px auto;
+    border: none;
+    border-radius: 2px;
+    box-shadow:
+      0 10px 25px rgba(0, 0, 0, 0.05),
+      5px 5px 15px rgba(0, 0, 0, 0.05);
+    transform: rotate(347deg);
+    font-family: "Indie Flower", cursive;
+    font-size: 22px;
+    color: #4b3b28;
+    position: relative;
+    max-width: 100%;
+    line-height: 1.4;
+    text-align: center !important;
+  }
+  .post-content blockquote:nth-of-type(even) {
+    transform: rotate(347deg);
     background: #fff5f5;
-    border-radius: 0 12px 12px 0;
-    margin: 24px 0;
-    color: #495d56;
-    font-style: italic;
+  }
+  .post-content blockquote::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    border-width: 25px 25px 0 0;
+    border-style: solid;
+    border-color: rgba(0, 0, 0, 0.05) #fcfcfb;
+    display: block;
+    width: 0;
+  }
+  .post-content blockquote p {
+    margin: 0 !important;
+    text-align: center !important;
+    font-style: normal !important;
   }
   .post-content code {
     background: #f1f5f9;
