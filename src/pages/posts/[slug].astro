@@ -34,7 +34,7 @@ const contenidoHtml = post.contenido_md ? marked(post.contenido_md) : "";
 >
   <Header />
   <article
-    style="max-width: 780px; margin: 0 auto; padding:40px; font-family: 'Inter', sans-serif;"
+    style="max-width: 780px; margin: 0 auto; padding:20px; margin:15px; font-family: 'Inter', sans-serif; background:#fcfcfb;border-radius: 12px;"
   >
     <a
       href="/posts"
@@ -86,6 +86,7 @@ const contenidoHtml = post.contenido_md ? marked(post.contenido_md) : "";
 
 <style is:global>
   .post-content {
+    text-align: left !important;
     font-size: 16px;
     line-height: 1.8;
     color: #334155;
@@ -96,15 +97,18 @@ const contenidoHtml = post.contenido_md ? marked(post.contenido_md) : "";
     font-weight: 800;
     color: #1e293b;
     margin: 40px 0 16px;
+    text-align: left !important;
   }
   .post-content h3 {
     font-size: 20px;
     font-weight: 700;
     color: #1e293b;
     margin: 30px 0 12px;
+    text-align: left !important;
   }
   .post-content p {
     margin: 0 0 20px;
+    text-align: left !important;
   }
   .post-content a {
     color: #ff5e5e;
