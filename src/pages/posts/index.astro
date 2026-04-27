@@ -6,7 +6,9 @@ import { supabase } from "../../lib/supabase";
 
 const { data: posts } = await supabase
   .from("posts")
-  .select("id, slug, titulo, subtitulo, resumen, imagen_url, creado_en")
+  .select(
+    "id, slug, titulo, subtitulo, resumen, imagen_url, creado_en, categoria",
+  )
   .eq("publicado", true)
   .order("id", { ascending: false });
 ---
@@ -58,7 +60,7 @@ const { data: posts } = await supabase
                 <img
                   src={p.imagen_url}
                   alt={p.titulo}
-                  style="width: 100%; height: 220px; object-fit: cover;"
+                  style="width:90vw; height: auto; object-fit: cover;"
                 />
               )}
               <div style="padding: 28px;">
