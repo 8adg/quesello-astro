@@ -11,9 +11,12 @@ interface Props {
 const { 
 	title = "Queselló! Tienda Taller", 
 	description = "Fabricación y venta de sellos de goma para impresión artesanal. Encontrá sellos personalizados, almohadillas de tinta y más.",
-	image = "https://quesello.com.ar/site-image.png",
+	image: rawImage = "https://quesello.com.ar/site-image.png",
 	canonicalUrl = `https://quesello.com.ar${Astro.url.pathname}`
 } = Astro.props;
+
+const image = rawImage.startsWith('http') ? rawImage : `https://quesello.com.ar${rawImage.startsWith('/') ? '' : '/'}${rawImage}`;
+
 ---
 
 <!doctype html>
