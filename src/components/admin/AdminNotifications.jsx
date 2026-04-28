@@ -40,6 +40,8 @@ const AdminNotifications = () => {
         setToast(order);
         setTimeout(() => setToast(null), 8000);
 
+        window.dispatchEvent(new CustomEvent('new_order_received', { detail: order }));
+
         if (Notification.permission === 'granted') {
             new Notification("📦 ¡Nuevo Pedido!", {
                 body: `Cliente: ${order.cliente || 'Desconocido'}\nTotal: $${order.total || 0}`,

@@ -138,6 +138,7 @@ const { data: recent } = await supabase
 				Pedidos pendientes
 			</div>
 			<div
+				id="pending-count"
 				style="font-size: 80px; font-weight: 800; color: #FF5E5E; line-height: 1;"
 			>
 				{pendingCount}
@@ -198,7 +199,8 @@ const { data: recent } = await supabase
 
 	<!-- Bottom Notifications -->
 	<footer
-		style="margin-top: auto; display: flex; gap: 20px; padding-bottom: 20px;"
+		id="recent-orders-footer"
+		style="margin-top: auto; display: flex; gap: 20px; padding-bottom: 20px; transition: all 0.3s;"
 	>
 		{
 			recent?.map((order) => (
@@ -235,7 +237,7 @@ const { data: recent } = await supabase
 		}
 		{
 			(!recent || recent.length === 0) && (
-				<div style="text-align: center; width: 100%; opacity: 0.3; font-weight: 700; font-size: 14px;">
+				<div class="empty-msg" style="text-align: center; width: 100%; opacity: 0.3; font-weight: 700; font-size: 14px;">
 					No hay actividad reciente
 				</div>
 			)
@@ -252,5 +254,58 @@ const { data: recent } = await supabase
 	.btn:hover {
 		transform: translateY(-2px);
 		filter: brightness(1.1);
+	}
+</style>
+
+<script is:inline>
+	document.addEventListener('DOMContentLoaded', () => {
+		window.addEventListener('new_order_received', (e) => {
+			const order = e.detail;
+
+			// 1. Actualizar el contador grande
+			const pendingEl = document.getElementById('pending-count');
+			if (pendingEl) {
+				const currentCount = parseInt(pendingEl.innerText) || 0;
+				pendingEl.innerText = currentCount + 1;
+				
+				// Animación sutil de rebote
+				pendingEl.style.transform = 'scale(1.2)';
+				pendingEl.style.transition = 'transform 0.3s ease';
+				setTimeout(() => pendingEl.style.transform = 'scale(1)', 300);
+			}
+
+			// 2. Agregar el chip abajo
+			const footer = document.getElementById('recent-orders-footer');
+			if (footer) {
+				const emptyMsg = footer.querySelector('.empty-msg');
+				if (emptyMsg) emptyMsg.remove();
+
+				const chip = document.createElement('div');
+				chip.style.cssText = "background: #EED7D7; border-radius: 18px; padding: 18px 25px; display: flex; align-items: center; gap: 15px; flex: 1; color: #664923; font-weight: 700; border: 1px solid rgba(0,0,0,0.05); animation: slideInUp 0.4s ease-out;";
+				chip.innerHTML = `
+					<div style="width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
+						<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+							<path d="M17.6 22.4C17.6 23.2837 16.8837 24 16 24C15.1163 24 14.4 23.2837 14.4 22.4C14.4 21.5163 15.1163 20.8 16 20.8C16.8837 20.8 17.6 21.5163 17.6 22.4Z" fill="#664923"/>
+							<path d="M28.8 16C28.8 8.93075 23.0692 3.2 16 3.2C8.93075 3.2 3.2 8.93075 3.2 16C3.2 23.0692 8.93075 28.8 16 28.8C23.0692 28.8 28.8 23.0692 28.8 16ZM14.4 17.6V9.6C14.4 8.71634 15.1163 8 16 8C16.8837 8 17.6 8.71634 17.6 9.6V17.6C17.6 18.4837 16.8837 19.2 16 19.2C15.1163 19.2 14.4 18.4837 14.4 17.6ZM32 16C32 24.8366 24.8366 32 16 32C7.16344 32 0 24.8366 0 16C0 7.16344 7.16344 0 16 0C24.8366 0 32 7.16344 32 16Z" fill="#664923"/>
+						</svg>
+					</div>
+					Nuevo pedido de <span style="color: #664923; margin-left: 5px;">${order.cliente || 'Desconocido'}</span>
+				`;
+				
+				footer.prepend(chip);
+
+				// Mantener solo los últimos 2 chips
+				if (footer.children.length > 2) {
+					footer.removeChild(footer.lastChild);
+				}
+			}
+		});
+	});
+</script>
+
+<style>
+	@keyframes slideInUp {
+		from { opacity: 0; transform: translateY(20px); }
+		to { opacity: 1; transform: translateY(0); }
 	}
 </style>
