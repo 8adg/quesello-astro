@@ -60,18 +60,20 @@ const fechaFormateada = `Publicado el ${fecha.getDate()}/${fecha.getMonth() + 1}
       )
     }
 
-    <span style="display: block; font-size: 12px; color: #64748B; font-weight: 500; margin-bottom: 8px;">
+    <span
+      style="display: block; font-size: 12px; color: #64748B; font-weight: 500; margin-bottom: 8px;"
+    >
       {fechaFormateada}
     </span>
     <h1
-      style="font-size: 36px; font-weight: 900; color: #1E293B; margin: 0 0 12px 0; line-height: 1.2;"
+      style="font-size: 36px; font-weight: 900; color: #405e8f; margin: 0 0 12px 0; line-height: 1.2;"
     >
       {post.titulo}
     </h1>
 
     {
       post.subtitulo && (
-        <p style="font-size: 18px; color: #FF5E5E; font-weight: 600; margin: 0 0 20px 0;">
+        <p style="font-size: 18px; color: #456044; font-weight: 600; margin: 0 0 20px 0;">
           {post.subtitulo}
         </p>
       )
@@ -134,9 +136,11 @@ const fechaFormateada = `Publicado el ${fecha.getDate()}/${fecha.getMonth() + 1}
     margin: 45px auto;
     border: none;
     border-radius: 2px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.05), 5px 5px 15px rgba(0,0,0,0.05);
+    box-shadow:
+      0 10px 25px rgba(0, 0, 0, 0.05),
+      5px 5px 15px rgba(0, 0, 0, 0.05);
     transform: rotate(-1.5deg);
-    font-family: 'Indie Flower', cursive;
+    font-family: "Indie Flower", cursive;
     font-size: 22px;
     color: #4b3b28;
     position: relative;
@@ -155,7 +159,7 @@ const fechaFormateada = `Publicado el ${fecha.getDate()}/${fecha.getMonth() + 1}
     right: 0;
     border-width: 25px 25px 0 0;
     border-style: solid;
-    border-color: rgba(0,0,0,0.05) #fff;
+    border-color: rgba(0, 0, 0, 0.05) #fff;
     display: block;
     width: 0;
   }
