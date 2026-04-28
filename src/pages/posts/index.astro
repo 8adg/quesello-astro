@@ -2,6 +2,7 @@
 import Layout from "../../layouts/Layout.astro";
 import Header from "../../components/HeaderPost.astro";
 import Footer from "../../components/Footer.astro";
+import PostsSlider from "../../components/PostsSlider.jsx";
 import { supabase } from "../../lib/supabase";
 
 const { data: posts } = await supabase
@@ -11,6 +12,15 @@ const { data: posts } = await supabase
   )
   .eq("publicado", true)
   .order("id", { ascending: false });
+
+const postsByCategory = (posts || []).reduce((acc, p) => {
+  const cat = p.categoria || "Destacados";
+  if (!acc[cat]) acc[cat] = [];
+  acc[cat].push(p);
+  return acc;
+}, {});
+
+const categories = Object.keys(postsByCategory);
 ---
 
 <Layout
@@ -45,48 +55,10 @@ const { data: posts } = await supabase
     </p>
 
     {
-      posts && posts.length > 0 ? (
-        <div style="display: flex; flex-direction: column; gap: 24px;">
-          {posts.map((p) => (
-            <a
-              href={
-                p.categoria
-                  ? `/posts/${p.categoria}/${p.slug}`
-                  : `/posts/${p.slug}`
-              }
-              style="text-decoration: none; display: block; background: white; border-radius: 24px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.06); border: 1px solid #F1F5F9; transition: transform 0.2s;"
-            >
-              {p.imagen_url && (
-                <img
-                  src={p.imagen_url}
-                  alt={p.titulo}
-                  style="width:90vw; height: auto; object-fit: cover;"
-                />
-              )}
-              <div style="padding: 28px;">
-                {p.categoria && (
-                  <span style="font-size: 11px; font-weight: 700; color: #FF5E5E; text-transform: uppercase; letter-spacing: 0.05em;">
-                    {p.categoria}
-                  </span>
-                )}
-                <h2 style="font-size: 22px; font-weight: 800; color: #1E293B; margin: 6px 0 8px 0;">
-                  {p.titulo}
-                </h2>
-                {p.subtitulo && (
-                  <p style="font-size: 15px; color: #64748B; font-weight: 600; margin: 0 0 12px 0;">
-                    {p.subtitulo}
-                  </p>
-                )}
-                {p.resumen && (
-                  <p style="font-size: 14px; color: #64748B; margin: 0 0 16px 0; line-height: 1.6;">
-                    {p.resumen}
-                  </p>
-                )}
-                <span style="font-size: 13px; color: #FF5E5E; font-weight: 700;">
-                  Leer más →
-                </span>
-              </div>
-            </a>
+      categories.length > 0 ? (
+        <div style="display: flex; flex-direction: column; gap: 40px; margin-left: -20px; margin-right: -20px;">
+          {categories.map((cat) => (
+            <PostsSlider client:load title={cat} posts={postsByCategory[cat]} />
           ))}
         </div>
       ) : (

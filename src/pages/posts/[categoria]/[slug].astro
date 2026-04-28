@@ -29,6 +29,9 @@ const { data: post } = await supabase
 if (!post) return Astro.redirect("/posts");
 
 const contenidoHtml = post.contenido_md ? marked(post.contenido_md) : "";
+
+const fecha = new Date(post.creado_en);
+const fechaFormateada = `Publicado el ${fecha.getDate()}/${fecha.getMonth() + 1}/${fecha.getFullYear()}`;
 ---
 
 <Layout
@@ -57,6 +60,9 @@ const contenidoHtml = post.contenido_md ? marked(post.contenido_md) : "";
       )
     }
 
+    <span style="display: block; font-size: 12px; color: #64748B; font-weight: 500; margin-bottom: 8px;">
+      {fechaFormateada}
+    </span>
     <h1
       style="font-size: 36px; font-weight: 900; color: #1E293B; margin: 0 0 12px 0; line-height: 1.2;"
     >
