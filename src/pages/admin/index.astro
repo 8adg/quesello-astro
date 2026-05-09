@@ -31,17 +31,25 @@ const lastDayOfPrevMonth = new Date(
 // 1. Ventas Mes Actual
 const { data: salesNow } = await supabase
 	.from("presupuestos")
-	.select("total")
+	.select("total, estado")
 	.gte("creado_en", firstDayOfMonth);
-const currentTotal = salesNow?.reduce((acc, o) => acc + (o.total || 0), 0) || 0;
+const currentTotal =
+	salesNow?.reduce((acc, o) => {
+		if (o.estado === "PAUSADO" || o.estado === "PENDIENTE") return acc;
+		return acc + (o.total || 0);
+	}, 0) || 0;
 
 // 2. Ventas Mes Anterior (para el %)
 const { data: salesPrev } = await supabase
 	.from("presupuestos")
-	.select("total")
+	.select("total, estado")
 	.gte("creado_en", firstDayOfPrevMonth)
 	.lte("creado_en", lastDayOfPrevMonth);
-const prevTotal = salesPrev?.reduce((acc, o) => acc + (o.total || 0), 0) || 1; // Evitar división por cero
+const prevTotal =
+	salesPrev?.reduce((acc, o) => {
+		if (o.estado === "PAUSADO" || o.estado === "PENDIENTE") return acc;
+		return acc + (o.total || 0);
+	}, 0) || 1; // Evitar división por cero
 const growth = Math.round(((currentTotal - prevTotal) / prevTotal) * 100);
 
 // 3. Conteo de Estados
@@ -122,11 +130,11 @@ const { data: recent } = await supabase
 		<!-- Imágenes de Fondo (Mockup characters) -->
 		<img
 			src="/pendientes-portada.png"
-			style="position: absolute; left: 15%; bottom: 25vh; height: 30vw; z-index: -1; opacity: 1;"
+			style="position: absolute; left: 15%; bottom: 5vh; height: 30vw; z-index: -1; opacity: 1;"
 		/>
 		<img
 			src="/entregados.png"
-			style="position: absolute; right: 30%; bottom: 25vh; height: 30vw; z-index: -1; opacity: 1;"
+			style="position: absolute; right: 30%; bottom: 5vh; height: 30vw; z-index: -1; opacity: 1;"
 		/>
 
 		<div
@@ -237,7 +245,10 @@ const { data: recent } = await supabase
 		}
 		{
 			(!recent || recent.length === 0) && (
-				<div class="empty-msg" style="text-align: center; width: 100%; opacity: 0.3; font-weight: 700; font-size: 14px;">
+				<div
+					class="empty-msg"
+					style="text-align: center; width: 100%; opacity: 0.3; font-weight: 700; font-size: 14px;"
+				>
 					No hay actividad reciente
 				</div>
 			)
@@ -258,30 +269,31 @@ const { data: recent } = await supabase
 </style>
 
 <script is:inline>
-	document.addEventListener('DOMContentLoaded', () => {
-		window.addEventListener('new_order_received', (e) => {
+	document.addEventListener("DOMContentLoaded", () => {
+		window.addEventListener("new_order_received", (e) => {
 			const order = e.detail;
 
 			// 1. Actualizar el contador grande
-			const pendingEl = document.getElementById('pending-count');
+			const pendingEl = document.getElementById("pending-count");
 			if (pendingEl) {
 				const currentCount = parseInt(pendingEl.innerText) || 0;
 				pendingEl.innerText = currentCount + 1;
-				
+
 				// Animación sutil de rebote
-				pendingEl.style.transform = 'scale(1.2)';
-				pendingEl.style.transition = 'transform 0.3s ease';
-				setTimeout(() => pendingEl.style.transform = 'scale(1)', 300);
+				pendingEl.style.transform = "scale(1.2)";
+				pendingEl.style.transition = "transform 0.3s ease";
+				setTimeout(() => (pendingEl.style.transform = "scale(1)"), 300);
 			}
 
 			// 2. Agregar el chip abajo
-			const footer = document.getElementById('recent-orders-footer');
+			const footer = document.getElementById("recent-orders-footer");
 			if (footer) {
-				const emptyMsg = footer.querySelector('.empty-msg');
+				const emptyMsg = footer.querySelector(".empty-msg");
 				if (emptyMsg) emptyMsg.remove();
 
-				const chip = document.createElement('div');
-				chip.style.cssText = "background: #EED7D7; border-radius: 18px; padding: 18px 25px; display: flex; align-items: center; gap: 15px; flex: 1; color: #664923; font-weight: 700; border: 1px solid rgba(0,0,0,0.05); animation: slideInUp 0.4s ease-out;";
+				const chip = document.createElement("div");
+				chip.style.cssText =
+					"background: #EED7D7; border-radius: 18px; padding: 18px 25px; display: flex; align-items: center; gap: 15px; flex: 1; color: #664923; font-weight: 700; border: 1px solid rgba(0,0,0,0.05); animation: slideInUp 0.4s ease-out;";
 				chip.innerHTML = `
 					<div style="width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
 						<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -289,9 +301,9 @@ const { data: recent } = await supabase
 							<path d="M28.8 16C28.8 8.93075 23.0692 3.2 16 3.2C8.93075 3.2 3.2 8.93075 3.2 16C3.2 23.0692 8.93075 28.8 16 28.8C23.0692 28.8 28.8 23.0692 28.8 16ZM14.4 17.6V9.6C14.4 8.71634 15.1163 8 16 8C16.8837 8 17.6 8.71634 17.6 9.6V17.6C17.6 18.4837 16.8837 19.2 16 19.2C15.1163 19.2 14.4 18.4837 14.4 17.6ZM32 16C32 24.8366 24.8366 32 16 32C7.16344 32 0 24.8366 0 16C0 7.16344 7.16344 0 16 0C24.8366 0 32 7.16344 32 16Z" fill="#664923"/>
 						</svg>
 					</div>
-					Nuevo pedido de <span style="color: #664923; margin-left: 5px;">${order.cliente || 'Desconocido'}</span>
+					Nuevo pedido de <span style="color: #664923; margin-left: 5px;">${order.cliente || "Desconocido"}</span>
 				`;
-				
+
 				footer.prepend(chip);
 
 				// Mantener solo los últimos 2 chips
@@ -305,7 +317,13 @@ const { data: recent } = await supabase
 
 <style>
 	@keyframes slideInUp {
-		from { opacity: 0; transform: translateY(20px); }
-		to { opacity: 1; transform: translateY(0); }
+		from {
+			opacity: 0;
+			transform: translateY(20px);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
 	}
 </style>

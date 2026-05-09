@@ -94,10 +94,21 @@ export default function ProductManager() {
   };
 
   if (view === 'form') {
+    const nextCode = (() => {
+      const qsCodes = products
+        .map(p => p.codigo)
+        .filter(c => typeof c === 'string' && c.startsWith('QS-'))
+        .map(c => parseInt(c.replace('QS-', ''), 10))
+        .filter(n => !isNaN(n));
+      const nextNum = qsCodes.length > 0 ? Math.max(...qsCodes) + 1 : 1;
+      return `QS-${nextNum.toString().padStart(3, '0')}`;
+    })();
+
     return (
       <ProductForm 
         product={editingProduct} 
         categories={categories}
+        defaultCode={nextCode}
         onSave={handleSave} 
         onCancel={() => setView('list')} 
       />
@@ -179,9 +190,9 @@ export default function ProductManager() {
   );
 }
 
-function ProductForm({ product, categories, onSave, onCancel }) {
+function ProductForm({ product, categories, onSave, onCancel, defaultCode }) {
   const [formData, setFormData] = useState({
-    codigo: product?.codigo || "",
+    codigo: product?.codigo || defaultCode || "",
     descripcion: product?.descripcion || "",
     precio: product?.precio || "",
     categoria: product?.categoria || "",

@@ -23,7 +23,7 @@ export default function AdminSidebar({ activeId = 'dashboard' }) {
         const { data: { session } } = await supabase.auth.getSession();
         if (session) {
           setUserName(session.user.user_metadata?.nombre || "Administrador");
-          setIsSuperAdmin(session.user.user_metadata?.franquicia_id === 1);
+          setIsSuperAdmin(Number(session.user.user_metadata?.franquicia_id) === 1);
         } else {
           // Si no hay sesión (dev mode), asumimos que es Casa Matriz para no romper el flujo
           setUserName("Casa Matriz");
@@ -89,11 +89,22 @@ export default function AdminSidebar({ activeId = 'dashboard' }) {
 
       {/* User profile icon (Solo icono en colapsado) */}
       <div style={{ marginBottom: '50px', display: 'flex', flexDirection: 'column', alignItems: isCollapsed ? 'center' : 'flex-start', width: '100%', padding: isCollapsed ? '0' : '0 40px', boxSizing: 'border-box' }}>
+        {!isCollapsed && (
+            <button 
+                onClick={async () => { await supabase.auth.signOut(); window.location.reload(); }}
+                style={{ background: 'transparent', border: 'none', padding: 0, color: '#94A3B8', fontSize: '11px', textDecoration: 'underline', cursor: 'pointer', marginBottom: '10px', fontFamily: 'Inter' }}
+            >
+                Cerrar sesión
+            </button>
+        )}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
              <img src="https://api.iconify.design/lucide:user-round-cog.svg?color=%23735c3f" style={{ width: '24px' }} alt="" />
-             {!isCollapsed && <span style={{ fontSize: '16px', color: '#735c3f', fontWeight: 500, fontFamily: 'Inter' }}>Hola</span>}
+             {!isCollapsed && (
+                 <span style={{ fontSize: '15px', fontFamily: 'Inter', whiteSpace: 'nowrap' }}>
+                     <span style={{ color: '#735c3f', fontWeight: 500 }}>Hola,</span> <strong style={{ color: '#4b3b28', fontWeight: 900 }}>{userName}</strong>
+                 </span>
+             )}
         </div>
-        {!isCollapsed && <div style={{ fontSize: '20px', fontWeight: 900, color: '#4b3b28', fontFamily: 'Inter', marginTop: '5px' }}>{userName}</div>}
       </div>
 
       {/* Navigation */}

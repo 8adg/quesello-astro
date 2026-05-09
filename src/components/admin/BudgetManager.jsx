@@ -142,7 +142,10 @@ export default function BudgetManager() {
         </div>
 
         <div style={{ background: '#F4F1E1', padding: '14px 25px', borderRadius: '18px', color: '#4b3b28', fontWeight: 800, fontSize: '16px', display: 'flex', alignItems: 'center' }}>
-          TOTAL VENTAS: $ {filteredOrders.reduce((acc, o) => acc + (o.total || 0), 0).toLocaleString('es-AR')}
+          TOTAL VENTAS: $ {filteredOrders.reduce((acc, o) => {
+            if (o.estado === 'PAUSADO' || o.estado === 'PENDIENTE') return acc;
+            return acc + (o.total || 0);
+          }, 0).toLocaleString('es-AR')}
         </div>
       </div>
 
