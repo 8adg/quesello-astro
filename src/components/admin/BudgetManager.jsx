@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import BudgetRow from './BudgetRow';
 import BudgetEditor from './BudgetEditor';
+import MpReconciliation from './MpReconciliation';
 import { supabase } from '../../lib/supabase';
 import PrintModal from './PrintModal';
 
@@ -100,12 +101,36 @@ export default function BudgetManager() {
     );
   }
 
+  if (view === 'reconciliation') {
+    return (
+      <div style={{ height: '100%' }}>
+        <MpReconciliation onBack={() => setView('list')} />
+      </div>
+    );
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', fontFamily: 'Inter', position: 'relative' }}>
       
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
         <h1 style={{ fontSize: '28px', color: '#FF5E5E', fontWeight: 800, margin: 0 }}>Presupuestos</h1>
-        <button onClick={() => { setEditingOrder(null); setView('editor'); }} style={{ background: '#FF5E5E', color: 'white', border: 'none', padding: '12px 25px', borderRadius: '18px', fontWeight: 500, cursor: 'pointer' }}>+ Nuevo pedido</button>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button 
+            onClick={() => setView('reconciliation')} 
+            style={{ 
+              background: '#F4F1E1', 
+              color: '#8B1E1E', 
+              border: 'none', 
+              padding: '12px 25px', 
+              borderRadius: '18px', 
+              fontWeight: 800, 
+              cursor: 'pointer' 
+            }}
+          >
+            Conciliar Pagos
+          </button>
+          <button onClick={() => { setEditingOrder(null); setView('editor'); }} style={{ background: '#FF5E5E', color: 'white', border: 'none', padding: '12px 25px', borderRadius: '18px', fontWeight: 500, cursor: 'pointer' }}>+ Nuevo pedido</button>
+        </div>
       </header>
 
       <hr style={{ border: 'none', height: '2px', background: '#aba9a4', opacity: 0.2, margin: '24px 0' }} />
