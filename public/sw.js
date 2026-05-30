@@ -1,4 +1,4 @@
-const CACHE_NAME = 'quesello-pwa-v1';
+const CACHE_NAME = 'quesello-pwa-v2';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -31,10 +31,35 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+  // Solo procesar solicitudes GET
+  if (event.request.method !== 'GET') return;
+
+  // No cachear llamadas a APIs o servicios externos
+  const url = event.request.url;
+  if (
+    url.includes('supabase.co') || 
+    url.includes('google-analytics.com') || 
+    url.includes('googletagmanager.com') || 
+    url.includes('firestore.googleapis.com')
+  ) {
+    return;
+  }
+
   event.respondWith(
-    caches.match(event.request).then((response) => {
-      // Devuelve lo del caché, o sigue al servidor
-      return response || fetch(event.request);
-    })
+    fetch(event.request)
+      .then((response) => {
+        // Clonar y guardar en caché solo si es una respuesta de nuestro origen
+        if (response && response.status === 200 && response.type === 'basic') {
+          const responseToCache = response.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseToCache);
+          });
+        }
+        return response;
+      })
+      .catch(() => {
+        // Fallback al caché si no hay internet (offline)
+        return caches.match(event.request);
+      })
   );
 });
