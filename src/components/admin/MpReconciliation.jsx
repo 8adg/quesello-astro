@@ -24,6 +24,28 @@ export default function MpReconciliation({ onBack }) {
     setTimeout(() => setToast(null), 3000);
   };
 
+  const handleSync = async () => {
+    setLoading(true);
+    try {
+      const secret = "M@timan1976/*";
+      const response = await fetch(`https://yihizwspxnxlfowvitoe.supabase.co/functions/v1/mp-webhook?secret=${encodeURIComponent(secret)}`);
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+      const res = await response.json();
+      if (res.success) {
+        showToast(`Sincronización completada.`);
+      } else {
+        showToast("Error en la sincronización.");
+      }
+    } catch (err) {
+      console.error(err);
+      showToast("Error al sincronizar con Mercado Pago");
+    } finally {
+      loadData();
+    }
+  };
+
   const loadData = async () => {
     setLoading(true);
     try {
@@ -274,7 +296,7 @@ export default function MpReconciliation({ onBack }) {
           style={{ flex: 1, padding: '14px 20px', borderRadius: '18px', border: '2px solid #EDF2F7', background: 'white', fontSize: '15px', outline: 'none' }} 
         />
         <button 
-          onClick={loadData} 
+          onClick={handleSync} 
           style={{ 
             background: '#F4F1E1', 
             border: 'none', 
@@ -286,7 +308,7 @@ export default function MpReconciliation({ onBack }) {
             justifyContent: 'center'
           }}
         >
-          <img src="https://api.iconify.design/lucide:refresh-cw.svg?color=%234b3b28" style={{ width: '18px', height: '18px' }} alt="Recargar" />
+          <img src="https://api.iconify.design/lucide:refresh-cw.svg?color=%234b3b28" style={{ width: '18px', height: '18px' }} alt="Sincronizar" />
         </button>
       </div>
 
