@@ -239,7 +239,7 @@ export default function PostsManager() {
             onDragOver={e => e.preventDefault()}
             style={{ ...rowStyle, cursor: 'move' }}>
             <div style={{ marginRight: '16px', color: '#E2E8F0', flexShrink: 0 }}>
-              <img src="https://api.iconify.design/lucide:grip-vertical.svg?color=%23CBD5E1" style={{ width: '20px', display: 'block' }} alt="" />
+              <img src="https://api.iconify.design/lucide/grip-vertical.svg?color=%23CBD5E1" style={{ width: '20px', display: 'block' }} alt="" />
             </div>
             <div style={{ flex: 1 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
@@ -254,13 +254,13 @@ export default function PostsManager() {
             </div>
             <div style={{ display: 'flex', gap: '4px', marginLeft: '20px', alignItems: 'center' }}>
               <button onClick={() => handleTogglePublicado(p)} title={p.publicado ? 'Despublicar' : 'Publicar'} style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '5px' }}>
-                <img src={`https://api.iconify.design/lucide:${p.publicado ? 'eye-off' : 'send'}.svg?color=%234b3b28`} style={{ width: '22px' }} alt={p.publicado ? 'Despublicar' : 'Publicar'} />
+                <img src={`https://api.iconify.design/lucide/${p.publicado ? 'eye-off' : 'send'}.svg?color=%234b3b28`} style={{ width: '22px' }} alt={p.publicado ? 'Despublicar' : 'Publicar'} />
               </button>
               <button onClick={() => handleEdit(p)} title="Editar" style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '5px' }}>
-                <img src="https://api.iconify.design/lucide:edit-3.svg?color=%231a202c" style={{ width: '22px' }} alt="Editar" />
+                <img src="https://api.iconify.design/lucide/edit-3.svg?color=%231a202c" style={{ width: '22px' }} alt="Editar" />
               </button>
               <button onClick={() => handleDelete(p.id)} title="Eliminar" style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '5px' }}>
-                <img src="https://api.iconify.design/lucide:trash-2.svg?color=%231a202c" style={{ width: '22px' }} alt="Eliminar" />
+                <img src="https://api.iconify.design/lucide/trash-2.svg?color=%231a202c" style={{ width: '22px' }} alt="Eliminar" />
               </button>
             </div>
           </div>

@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
 
-const iconEdit = <img src="https://api.iconify.design/lucide:edit-3.svg?color=%231a202c" style={{ width: '22px' }} alt="Editar" />;
-const iconDelete = <img src="https://api.iconify.design/lucide:trash-2.svg?color=%231a202c" style={{ width: '22px' }} alt="Eliminar" />;
-const iconDrag = <img src="https://api.iconify.design/lucide:grip-vertical.svg?color=%23CBD5E1" style={{ width: '20px' }} alt="" />;
+const iconEdit = <img src="https://api.iconify.design/lucide/edit-3.svg?color=%231a202c" style={{ width: '22px' }} alt="Editar" />;
+const iconDelete = <img src="https://api.iconify.design/lucide/trash-2.svg?color=%231a202c" style={{ width: '22px' }} alt="Eliminar" />;
+const iconDrag = <img src="https://api.iconify.design/lucide/grip-vertical.svg?color=%23CBD5E1" style={{ width: '20px' }} alt="" />;
 
 export default function MenuSliderManager() {
   const [menus, setMenus] = useState([]);

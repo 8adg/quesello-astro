@@ -39,16 +39,17 @@ export default function AdminSidebar({ activeId = 'dashboard' }) {
   
   const getIcon = (name, color, size = '24px') => {
     const iconMap = {
-      'monitor': 'lucide:monitor',
-      'receipt': 'lucide:receipt',
-      'layout-grid': 'lucide:shapes',
-      'stamp': 'mdi:stamper',
-      'list': 'lucide:list',
-      'newspaper': 'lucide:newspaper',
-      'store': 'lucide:store',
-      'settings': 'lucide:settings',
+      'monitor': 'lucide/monitor',
+      'receipt': 'lucide/receipt',
+      'layout-grid': 'lucide/shapes',
+      'stamp': 'mdi/stamper',
+      'list': 'lucide/list',
+      'newspaper': 'lucide/newspaper',
+      'store': 'lucide/store',
+      'settings': 'lucide/settings',
     };
-    return <img src={`https://api.iconify.design/${iconMap[name] || name}.svg?color=${encodeURIComponent(color)}`} style={{ width: size, height: size }} alt="" />;
+    const iconKey = (iconMap[name] || name).replace(':', '/');
+    return <img src={`https://api.iconify.design/${iconKey}.svg?color=${encodeURIComponent(color)}`} style={{ width: size, height: size }} alt="" />;
   };
 
   return (
@@ -98,7 +99,7 @@ export default function AdminSidebar({ activeId = 'dashboard' }) {
             </button>
         )}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-             <img src="https://api.iconify.design/lucide:user-round-cog.svg?color=%23735c3f" style={{ width: '24px' }} alt="" />
+             <img src="https://api.iconify.design/lucide/user-round-cog.svg?color=%23735c3f" style={{ width: '24px' }} alt="" />
              {!isCollapsed && (
                  <span style={{ fontSize: '15px', fontFamily: 'Inter', whiteSpace: 'nowrap' }}>
                      <span style={{ color: '#735c3f', fontWeight: 500 }}>Hola,</span> <strong style={{ color: '#4b3b28', fontWeight: 900 }}>{userName}</strong>
@@ -163,7 +164,7 @@ export default function AdminSidebar({ activeId = 'dashboard' }) {
         }}
       >
         <img 
-          src={`https://api.iconify.design/lucide:chevron-${isCollapsed ? 'right' : 'left'}.svg?color=%2394A3B8`} 
+          src={`https://api.iconify.design/lucide/chevron-${isCollapsed ? 'right' : 'left'}.svg?color=%2394A3B8`} 
           style={{ width: '24px' }} 
           alt="Toggle" 
         />

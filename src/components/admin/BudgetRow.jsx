@@ -90,13 +90,13 @@ export default function BudgetRow({ id_db, numero, cliente, retiro, total, pagad
       {/* Acciones */}
       <div style={{ display: 'flex', gap: '8px', width: '130px', justifyContent: 'center' }}>
         <button onClick={onEdit} style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '5px' }}>
-          <img src="https://api.iconify.design/lucide:edit-3.svg?color=%231a202c" style={{ width: '22px' }} alt="Edit" />
+          <img src="https://api.iconify.design/lucide/edit-3.svg?color=%231a202c" style={{ width: '22px' }} alt="Edit" />
         </button>
         <button onClick={() => onPrint()} style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '5px' }}>
-          <img src="https://api.iconify.design/lucide:printer.svg?color=%234b3b28" style={{ width: '22px' }} alt="Print" />
+          <img src="https://api.iconify.design/lucide/printer.svg?color=%234b3b28" style={{ width: '22px' }} alt="Print" />
         </button>
         <button onClick={onDelete} style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '5px' }}>
-          <img src="https://api.iconify.design/lucide:trash-2.svg?color=%231a202c" style={{ width: '22px' }} alt="Delete" />
+          <img src="https://api.iconify.design/lucide/trash-2.svg?color=%231a202c" style={{ width: '22px' }} alt="Delete" />
         </button>
       </div>
     </div>

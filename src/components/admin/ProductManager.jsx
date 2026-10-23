@@ -315,7 +315,7 @@ function ProductForm({ product, categories, onSave, onCancel, defaultCode }) {
               {previewUrl ? (
                 <img src={previewUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="Preview" />
               ) : (
-                <img src="https://api.iconify.design/lucide:image.svg?color=%23aba9a4" style={{ width: '32px' }} />
+                <img src="https://api.iconify.design/lucide/image.svg?color=%23aba9a4" style={{ width: '32px' }} />
               )}
             </div>
             <div style={{ flex: 1 }}>

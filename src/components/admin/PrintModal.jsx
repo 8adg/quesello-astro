@@ -62,7 +62,7 @@ export default function PrintModal({ order, onClose }) {
               opacity: loading ? 0.6 : 1
             }}
           >
-            <img src="https://api.iconify.design/lucide:printer.svg?color=white" style={{ width: '20px' }} alt="" />
+            <img src="https://api.iconify.design/lucide/printer.svg?color=white" style={{ width: '20px' }} alt="" />
             Imprimir en Meow (Bluetooth)
           </button>
 
@@ -86,7 +86,7 @@ export default function PrintModal({ order, onClose }) {
               opacity: loading ? 0.6 : 1
             }}
           >
-            <img src="https://api.iconify.design/lucide:file-text.svg?color=%23FF5E5E" style={{ width: '20px' }} alt="" />
+            <img src="https://api.iconify.design/lucide/file-text.svg?color=%23FF5E5E" style={{ width: '20px' }} alt="" />
             Descargar PDF Termico
           </button>
         </div>

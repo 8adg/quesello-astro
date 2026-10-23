@@ -202,13 +202,13 @@ export default function CategoryManager() {
                   }}
                   style={{ border: 'none', background: 'transparent', cursor: 'pointer' }}
                 >
-                  <img src="https://api.iconify.design/lucide:edit-3.svg?color=%23495D56" style={{ width: '20px' }} />
+                  <img src="https://api.iconify.design/lucide/edit-3.svg?color=%23495D56" style={{ width: '20px' }} />
                 </button>
                 <button 
                   onClick={() => deleteCategory(cat.id)}
                   style={{ border: 'none', background: 'transparent', cursor: 'pointer' }}
                 >
-                  <img src="https://api.iconify.design/lucide:trash-2.svg?color=%23FF5E5E" style={{ width: '20px' }} />
+                  <img src="https://api.iconify.design/lucide/trash-2.svg?color=%23FF5E5E" style={{ width: '20px' }} />
                 </button>
               </div>
             </div>

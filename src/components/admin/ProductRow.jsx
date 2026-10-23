@@ -65,7 +65,7 @@ export default function ProductRow({ product, onEdit, onRefresh, onDelete, onDra
             loading="lazy"
           />
         ) : (
-          <img src="https://api.iconify.design/lucide:package.svg?color=%23aba9a4" style={{ width: '24px' }} alt="" />
+          <img src="https://api.iconify.design/lucide/package.svg?color=%23aba9a4" style={{ width: '24px' }} alt="" />
         )}
       </div>
 
@@ -131,10 +131,10 @@ export default function ProductRow({ product, onEdit, onRefresh, onDelete, onDra
       {/* 7. ACCIONES */}
       <div style={{ display: 'flex', gap: '20px', width: '90px', justifyContent: 'flex-end' }}>
         <button type="button" onClick={onEdit} style={{ border: 'none', background: 'transparent', cursor: 'pointer' }}>
-          <img src="https://api.iconify.design/lucide:edit-3.svg?color=%231a202c" style={{ width: '22px' }} alt="Edit" />
+          <img src="https://api.iconify.design/lucide/edit-3.svg?color=%231a202c" style={{ width: '22px' }} alt="Edit" />
         </button>
         <button type="button" onClick={onDelete} style={{ border: 'none', background: 'transparent', cursor: 'pointer' }}>
-          <img src="https://api.iconify.design/lucide:trash-2.svg?color=%231a202c" style={{ width: '22px' }} alt="Delete" />
+          <img src="https://api.iconify.design/lucide/trash-2.svg?color=%231a202c" style={{ width: '22px' }} alt="Delete" />
         </button>
       </div>
 
