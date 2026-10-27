@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
-
-const iconEdit = <img src="https://api.iconify.design/lucide/edit-3.svg?color=%231a202c" style={{ width: '22px' }} alt="Editar" />;
-const iconDelete = <img src="https://api.iconify.design/lucide/trash-2.svg?color=%231a202c" style={{ width: '22px' }} alt="Eliminar" />;
-const iconDrag = <img src="https://api.iconify.design/lucide/grip-vertical.svg?color=%23CBD5E1" style={{ width: '20px' }} alt="" />;
+import HeroSlideManager from './HeroSlideManager';
+import {
+  iconDelete, iconDrag, AddButton, FormActions, SwiperBehaviorPanel,
+  SliderListRow, useDragReorder, badgeStyle, badgeOnStyle
+} from './sliderAdminUI';
 
 export default function MenuSliderManager() {
+  const [activeTab, setActiveTab] = useState('productos'); // 'productos' | 'portada'
   const [menus, setMenus] = useState([]);
   const [productos, setProductos] = useState([]);
   const [categorias, setCategorias] = useState([]);
@@ -13,9 +15,9 @@ export default function MenuSliderManager() {
   const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [heroNewRequest, setHeroNewRequest] = useState(0);
+  const [heroFormOpen, setHeroFormOpen] = useState(false);
   
-  const dragMenu = useRef();
-  const dragOverMenu = useRef();
   const dragItem = useRef();
   const dragOverItem = useRef();
 
@@ -96,12 +98,7 @@ export default function MenuSliderManager() {
     setFormData({ ...formData, categoriaTarget: catName, items: catProducts });
   };
 
-  const onMenuDragEnd = () => {
-    const newList = [...menus];
-    const dragged = newList.splice(dragMenu.current, 1)[0];
-    newList.splice(dragOverMenu.current, 0, dragged);
-    saveAllToDB(newList);
-  };
+  const menuDragProps = useDragReorder(menus, (next) => saveAllToDB(next));
 
   const onItemDragEnd = () => {
     const newItems = [...formData.items];
@@ -114,23 +111,72 @@ export default function MenuSliderManager() {
 
   return (
     <div style={{ fontFamily: 'Inter', maxWidth: '1000px' }}>
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
+      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
         <div>
           <h1 style={{ fontSize: '28px', color: '#FF5E5E', fontWeight: 800, margin: 0 }}>Menús Sliders</h1>
-          <p style={{ color: '#64748B', fontSize: '14px', marginTop: '5px' }}>Organiza y configura tus carruseles dinámicos.</p>
+          <p style={{ color: '#64748B', fontSize: '14px', marginTop: '5px' }}>Organiza y configura tus carruseles dinámicos y portada.</p>
         </div>
-        {!showForm && (
-          <button 
-            onClick={() => { setShowForm(true); setEditingId(null); setFormData({
-              titulo: "", subtitulo: "", tipo: "categoria", categoriaTarget: "", items: [],
-              config: { autoplay: true, delay: 2500, disableOnInteraction: true, slidesPerViewDesktop: 4, slidesPerViewMobile: 2 }
-            }); }}
-            style={{ background: '#111', color: 'white', border: 'none', padding: '14px 28px', borderRadius: '18px', fontWeight: 700, cursor: 'pointer' }}
-          >
+        {activeTab === 'productos' && !showForm && (
+          <AddButton onClick={() => { setShowForm(true); setEditingId(null); setFormData({
+            titulo: "", subtitulo: "", tipo: "categoria", categoriaTarget: "", items: [],
+            config: { autoplay: true, delay: 2500, disableOnInteraction: true, slidesPerViewDesktop: 4, slidesPerViewMobile: 2 }
+          }); }}>
             NUEVO CARRUSEL
-          </button>
+          </AddButton>
+        )}
+        {activeTab === 'portada' && !heroFormOpen && (
+          <AddButton onClick={() => setHeroNewRequest((n) => n + 1)}>
+            NUEVO SLIDE DE PORTADA
+          </AddButton>
         )}
       </header>
+
+      {/* Tabs */}
+      <div style={{ display: 'flex', gap: '10px', background: '#F1F5F9', padding: '6px', borderRadius: '18px', marginBottom: '25px', width: 'fit-content' }}>
+        <button
+          onClick={() => setActiveTab('productos')}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '8px',
+            padding: '10px 22px',
+            borderRadius: '14px',
+            border: 'none',
+            fontWeight: 700,
+            fontSize: '13px',
+            cursor: 'pointer',
+            background: activeTab === 'productos' ? '#FFFFFF' : 'transparent',
+            color: activeTab === 'productos' ? '#1E293B' : '#64748B',
+            boxShadow: activeTab === 'productos' ? '0 2px 8px rgba(0,0,0,0.06)' : 'none',
+            transition: 'all 0.2s'
+          }}
+        >
+          <img src={`https://api.iconify.design/lucide/layout-list.svg?color=${activeTab === 'productos' ? '%231E293B' : '%2364748B'}`} style={{ width: '18px' }} alt="" />
+          Carruseles de Catálogo
+        </button>
+        <button
+          onClick={() => setActiveTab('portada')}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '8px',
+            padding: '10px 22px',
+            borderRadius: '14px',
+            border: 'none',
+            fontWeight: 700,
+            fontSize: '13px',
+            cursor: 'pointer',
+            background: activeTab === 'portada' ? '#FFFFFF' : 'transparent',
+            color: activeTab === 'portada' ? '#1E293B' : '#64748B',
+            boxShadow: activeTab === 'portada' ? '0 2px 8px rgba(0,0,0,0.06)' : 'none',
+            transition: 'all 0.2s'
+          }}
+        >
+          <img src={`https://api.iconify.design/lucide/image.svg?color=${activeTab === 'portada' ? '%231E293B' : '%2364748B'}`} style={{ width: '18px' }} alt="" />
+          Slides de Portada (Hero)
+        </button>
+      </div>
+
+      {activeTab === 'portada' ? (
+        <HeroSlideManager newRequest={heroNewRequest} onFormToggle={setHeroFormOpen} />
+      ) : (
+        <>
 
       {showForm && (
         <div style={{ background: 'white', padding: '35px', borderRadius: '35px', marginBottom: '40px', boxShadow: '0 20px 50px rgba(0,0,0,0.08)', border: '1px solid #f0f0f0' }}>
@@ -147,23 +193,7 @@ export default function MenuSliderManager() {
                   <input type="text" value={formData.subtitulo} onChange={(e) => setFormData({...formData, subtitulo: e.target.value})} style={{ width: '100%', padding: '16px', borderRadius: '14px', border: '2px solid #F1F5F9', outline: 'none' }} />
                 </div>
 
-                <div style={{ background: '#F8FAFC', padding: '20px', borderRadius: '24px', border: '1px solid #E2E8F0', marginBottom: '25px' }}>
-                   <label style={{ display: 'block', fontSize: '11px', fontWeight: 900, color: '#64748B', marginBottom: '15px' }}>COMPORTAMIENTO SWIPER</label>
-                   <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px' }}>
-                        <input type="checkbox" checked={formData.config?.autoplay} onChange={(e) => setFormData({...formData, config: { ...formData.config, autoplay: e.target.checked }})} />
-                        Autoplay
-                      </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px' }}>
-                        <input type="checkbox" checked={formData.config?.disableOnInteraction} onChange={(e) => setFormData({...formData, config: { ...formData.config, disableOnInteraction: e.target.checked }})} />
-                        Pausar al Tocar
-                      </label>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontSize: '12px', color: '#64748B' }}>Delay:</span>
-                        <input type="number" step="100" style={{ width: '80px', padding: '8px', borderRadius: '8px', border: '1px solid #E2E8F0' }} value={formData.config?.delay} onChange={(e) => setFormData({...formData, config: { ...formData.config, delay: parseInt(e.target.value) }})} />
-                      </div>
-                   </div>
-                </div>
+                <SwiperBehaviorPanel config={formData.config} onChange={(config) => setFormData({ ...formData, config })} />
               </div>
 
               {/* COLUMNA DERECHA: TEMA CARGA */}
@@ -218,34 +248,29 @@ export default function MenuSliderManager() {
               </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '15px' }}>
-              <button type="button" onClick={() => setShowForm(false)} style={{ flex: 1, padding: '18px', borderRadius: '18px', border: 'none', background: '#F1F5F9', color: '#64748B', fontWeight: 700, cursor: 'pointer' }}>DESCARTAR</button>
-              <button type="submit" disabled={saving} style={{ flex: 2, padding: '18px', borderRadius: '18px', border: 'none', background: '#FF5E5E', color: 'white', fontWeight: 800, cursor: 'pointer' }}>{saving ? 'PROCESANDO...' : 'GUARDAR CARRUSEL'}</button>
-            </div>
+            <FormActions onCancel={() => setShowForm(false)} saving={saving} saveLabel="GUARDAR CARRUSEL" />
           </form>
         </div>
       )}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
         {menus.map((m, idx) => (
-          <div key={m.id} draggable onDragStart={(e) => { dragMenu.current = idx; }} onDragEnter={(e) => { dragOverMenu.current = idx; }} onDragEnd={onMenuDragEnd} onDragOver={(e) => e.preventDefault()}
-            style={{ display: 'flex', alignItems: 'center', background: 'white', padding: '22px 30px', borderRadius: '28px', border: '1px solid #f8f8f8', cursor: 'move' }}>
-            <div style={{ marginRight: '20px', color: '#E2E8F0' }}>{iconDrag}</div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: '18px', fontWeight: 800, color: '#1E293B' }}>{m.titulo}</div>
-              <div style={{ fontSize: '13px', color: '#94A3B8' }}>{m.subtitulo}</div>
-              <div style={{ marginTop: '5px', display: 'flex', gap: '10px' }}>
-                <span style={{ fontSize: '10px', background: '#F1F5F9', padding: '3px 8px', borderRadius: '5px' }}>Tipo: {m.tipo}</span>
-                {m.config?.autoplay && <span style={{ fontSize: '10px', background: '#ECFDF5', color: '#059669', padding: '3px 8px', borderRadius: '5px' }}>Autoplay ON</span>}
-              </div>
-            </div>
-            <div style={{ display: 'flex', gap: '4px' }}>
-              <button onClick={() => { setFormData(m); setEditingId(m.id); setShowForm(true); }} title="Editar" style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '5px' }}>{iconEdit}</button>
-              <button onClick={() => saveAllToDB(menus.filter(x => x.id !== m.id))} title="Eliminar" style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '5px' }}>{iconDelete}</button>
-            </div>
-          </div>
+          <SliderListRow
+            key={m.id}
+            dragProps={menuDragProps(idx)}
+            title={m.titulo}
+            subtitle={m.subtitulo}
+            badges={<>
+              <span style={badgeStyle}>Tipo: {m.tipo}</span>
+              {m.config?.autoplay && <span style={badgeOnStyle}>Autoplay ON</span>}
+            </>}
+            onEdit={() => { setFormData(m); setEditingId(m.id); setShowForm(true); }}
+            onDelete={() => saveAllToDB(menus.filter(x => x.id !== m.id))}
+          />
         ))}
       </div>
+      </>
+      )}
     </div>
   );
 }

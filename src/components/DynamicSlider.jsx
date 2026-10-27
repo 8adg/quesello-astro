@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay } from "swiper/modules";
 import { addToCart } from "../store/cart";
@@ -17,6 +17,17 @@ export default function DynamicSlider({ title, subtitle, items, config = {} }) {
     return () => clearTimeout(timer);
   }, []);
 
+  // Si hay pocos items (ej: 4 o 5 en tintas o todavía más), duplicamos la lista para que Swiper pueda hacer el loop continuo infinito sin huecos a los lados
+  const displayItems = useMemo(() => {
+    if (!items || items.length === 0) return [];
+    if (items.length >= 10) return items;
+    let repeated = [...items];
+    while (repeated.length < 12) {
+      repeated = [...repeated, ...items];
+    }
+    return repeated;
+  }, [items]);
+
   const handleAddToCart = (p) => {
     addToCart(p);
     toast.success(`Agregado a tu pedido`, {
@@ -27,7 +38,7 @@ export default function DynamicSlider({ title, subtitle, items, config = {} }) {
   if (!items || items.length === 0) return null;
 
   return (
-    <section className="section" style={{ width: '100vw', overflow: 'hidden', paddingBottom: '60px' }}>
+    <section className="section" style={{ width: '100%', overflow: 'hidden', paddingBottom: '60px' }}>
       <Toaster position="bottom-center" />
       <div style={{ textAlign: 'center', marginBottom: '24px', width: '100%', padding: '0 20px' }}>
         <h2 style={{ textTransform: 'lowercase', fontSize: '28px', color: 'var(--primary)', marginBottom: '8px' }}>
@@ -48,13 +59,14 @@ export default function DynamicSlider({ title, subtitle, items, config = {} }) {
               delay: config.delay || 2500,
               disableOnInteraction: config.disableOnInteraction !== false,
             } : false}
-            loop={items.length > 2}
+            loop={displayItems.length > 2}
+            loopAdditionalSlides={4}
             spaceBetween={20}
             slidesPerView="auto"
             centeredSlides={true}
             style={{ width: '100%', overflow: 'visible' }}
           >
-            {items.map((p, i) => (
+            {displayItems.map((p, i) => (
               <SwiperSlide key={`${p.codigo}-${i}`} style={{ width: '300px' }}>
                 <div
                   className="card"

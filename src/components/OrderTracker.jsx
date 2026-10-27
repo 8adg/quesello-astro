@@ -9,6 +9,17 @@ export default function OrderTracker() {
   const [isScanning, setIsScanning] = useState(false);
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const queryCode = params.get("n") || params.get("pedido");
+      if (queryCode) {
+        setTicket(queryCode);
+        buscarPedidoGnr(queryCode.trim());
+      }
+    }
+  }, []);
+
+  useEffect(() => {
     let html5QrCode;
     if (isScanning) {
       import("html5-qrcode").then(({ Html5Qrcode }) => {

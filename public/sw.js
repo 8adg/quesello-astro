@@ -37,6 +37,8 @@ self.addEventListener('fetch', (event) => {
   // No cachear llamadas a APIs o servicios externos
   const url = event.request.url;
   if (
+    url.includes('localhost') ||
+    url.includes('127.0.0.1') ||
     url.includes('supabase.co') || 
     url.includes('google-analytics.com') || 
     url.includes('googletagmanager.com') || 

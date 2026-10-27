@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { cleanObservacionesForPrint } from '../components/admin/svgOrderUtils';
 
 const sleep = ms => new Promise(res => setTimeout(res, ms));
 
@@ -114,11 +115,28 @@ export const handleDirectMeowPrint = async (p, setMsg, setLoading) => {
 
 export const generateTicketCanvas = async (p) => {
   const { data: items } = await supabase.from("presupuesto_items").select("*").eq("presupuesto_id", p.id);
+  const printObs = cleanObservacionesForPrint(p.observaciones, items);
+
+  const wrappedObsLines = [];
+  if (printObs) {
+    const rawLines = printObs.toUpperCase().split('\n');
+    rawLines.forEach(l => {
+      let cur = l.trim();
+      while (cur.length > 34) {
+        let breakIdx = cur.lastIndexOf(' ', 34);
+        if (breakIdx <= 0) breakIdx = 34;
+        wrappedObsLines.push(cur.substring(0, breakIdx).trim());
+        cur = cur.substring(breakIdx).trim();
+      }
+      if (cur) wrappedObsLines.push(cur);
+    });
+  }
+
   const canvas = document.createElement('canvas');
   canvas.width = 384;
   const ctx = canvas.getContext('2d');
 
-  canvas.height = 630 + (items?.length || 0) * 25 + (p.observaciones ? 60 : 0);
+  canvas.height = 630 + (items?.length || 0) * 28 + (wrappedObsLines.length ? (wrappedObsLines.length + 1) * 25 : 0);
 
   ctx.fillStyle = "white"; ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.fillStyle = "black"; ctx.textBaseline = "top";
@@ -147,7 +165,8 @@ export const generateTicketCanvas = async (p) => {
   ctx.font = "bold 22px Courier New";
   ctx.fillText(`N° ${p.numero}`, 10, 125);
   ctx.font = "bold 18px Courier New";
-  ctx.fillText(`CLIENTE: ${p.cliente?.toUpperCase() || "C. FINAL"}`, 10, 155);
+  const clientText = `CLIENTE: ${p.cliente?.toUpperCase() || "C. FINAL"}`;
+  ctx.fillText(clientText.length > 20 ? clientText.substring(0, 20) : clientText, 10, 155);
   ctx.textAlign = "right";
   ctx.fillText(p.fecha || "", 374, 155);
   ctx.textAlign = "left";
@@ -170,10 +189,15 @@ export const generateTicketCanvas = async (p) => {
     currY += 25;
   });
 
-  if (p.observaciones) {
+  if (wrappedObsLines.length > 0) {
     ctx.font = "bold 16px Courier New";
-    ctx.fillText("OBS: " + p.observaciones.toUpperCase(), 10, currY);
-    currY += 35;
+    ctx.fillText("OBSERVACIONES:", 10, currY);
+    currY += 24;
+    wrappedObsLines.forEach(line => {
+      ctx.fillText(line, 10, currY);
+      currY += 22;
+    });
+    currY += 10;
   }
 
   ctx.beginPath(); ctx.moveTo(10, currY); ctx.lineTo(374, currY); ctx.stroke();
@@ -211,7 +235,27 @@ export const handleClientSidePDF = async (p, setMsg, setLoading) => {
   setLoading(true); setMsg({ text: "📄 GENERANDO PDF...", type: 'success' });
   try {
     const { data: items } = await supabase.from("presupuesto_items").select("*").eq("presupuesto_id", p.id);
-    const estimatedHeight = 115 + (items?.length || 0) * 8 + (p.observaciones ? 10 : 0) + 13.2;
+    const printObs = cleanObservacionesForPrint(p.observaciones, items);
+
+    // Cálculo dinámico de altura para garantizar 1 sola página continua
+    const CHARS_PER_LINE = 16;
+    let tableRowsHeight = 0;
+
+    (items || []).forEach(it => {
+      const descLen = (it.descripcion || '').length;
+      const lines = Math.max(1, Math.ceil(descLen / CHARS_PER_LINE));
+      tableRowsHeight += Math.max(6, lines * 3.5 + 2);
+    });
+
+    if (printObs) {
+      const obsLinesCount = printObs.split('\n').reduce((acc, line) => {
+        return acc + Math.max(1, Math.ceil(line.length / CHARS_PER_LINE));
+      }, 0);
+      tableRowsHeight += Math.max(8, (obsLinesCount + 1) * 3.5 + 2);
+    }
+
+    // Cabecera: 42mm | Encabezado/Pie tabla: 14mm | Footer y QR: 60mm | Margen extra: 15mm
+    const estimatedHeight = Math.max(135, Math.ceil(42 + 14 + tableRowsHeight + 60 + 15));
     const doc = new jsPDF({ unit: 'mm', format: [57, estimatedHeight] });
 
     const [logoBase64, qrBase64] = await Promise.all([
@@ -245,12 +289,30 @@ export const handleClientSidePDF = async (p, setMsg, setLoading) => {
     doc.setFontSize(8); doc.setFont("courier", "normal");
     doc.text("PRESUPUESTO", 2.5, 20);
     doc.text("NO VÁLIDO COMO FACTURA", 54.5, 25, { align: "right" });
-    doc.setFont("courier", "bold"); doc.text(`N° ${p.numero}`, 2.5, 31);
-    doc.text(`CLIENTE: ${p.cliente?.toUpperCase() || "C. FINAL"}`, 2.5, 36);
+    doc.setFont("courier", "bold"); 
+    doc.text(`N° ${p.numero}`, 2.5, 31);
+
+    const clientRaw = `CLIENTE: ${p.cliente?.toUpperCase() || "C. FINAL"}`;
+    if (clientRaw.length > 21) {
+      doc.setFontSize(6.5);
+    } else if (clientRaw.length > 16) {
+      doc.setFontSize(7);
+    } else {
+      doc.setFontSize(8);
+    }
+    doc.text(clientRaw, 2.5, 36);
+    doc.setFontSize(8);
     doc.text(`${p.fecha || ''}`, 54.5, 36, { align: "right" });
 
-    const rows = (items || []).map(it => [it.cantidad, it.descripcion.toUpperCase(), Math.floor(it.precio_unitario).toLocaleString(), Math.floor(it.total).toLocaleString()]);
-    if (p.observaciones) rows.push(['', `OBSERVACIONES:\n${p.observaciones.toUpperCase()}`, '', '']);
+    const rows = (items || []).map(it => [
+      it.cantidad, 
+      it.descripcion.toUpperCase(), 
+      Math.floor(it.precio_unitario).toLocaleString(), 
+      Math.floor(it.total).toLocaleString()
+    ]);
+    if (printObs) {
+      rows.push(['', `OBSERVACIONES:\n${printObs.toUpperCase()}`, '', '']);
+    }
 
     autoTable(doc, {
       head: [['U', 'DESCRIPCION', 'P.U.', 'TOTAL $']],
@@ -258,6 +320,7 @@ export const handleClientSidePDF = async (p, setMsg, setLoading) => {
       startY: 40,
       margin: { left: 2.5, right: 2.5 },
       tableWidth: 52,
+      pageBreak: 'avoid',
       theme: 'grid',
       styles: { font: 'courier', fontSize: 7, cellPadding: 1, textColor: [0, 0, 0], lineColor: [0, 0, 0] },
       headStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'bold', lineWidth: 0.2 },

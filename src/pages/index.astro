@@ -1,9 +1,8 @@
 ---
 import Layout from "../layouts/Layout.astro";
-import DesktopGate from "../components/DesktopGate.astro";
 import TopNav from "../components/TopNav.astro";
 import Header from "../components/Header.astro";
-import Hero from "../components/Hero.astro";
+import HeroSlider from "../components/HeroSlider.jsx";
 import Franquicia from "../components/Franquicia.astro";
 import OrderStatusCard from "../components/OrderStatusCard.astro";
 import SlidersLoader from "../components/SlidersLoader.jsx";
@@ -26,31 +25,29 @@ try {
 ---
 
 <Layout>
-	<DesktopGate>
-		<main class="w-full flex flex-col items-center">
-			
-            <TopNav franchise={franchise} />
-            
-			<div class="container text-center">
-				<Header loading="eager" priority="high" />
-				<Hero loading="eager" priority="high" />
-				<Franquicia />
-			</div>
-			
-			<OrderStatusCard />
+	<main class="w-full min-h-screen flex flex-col items-center overflow-x-hidden relative">
+		
+		<TopNav franchise={franchise} />
+		
+		<div class="container text-center">
+			<Header loading="eager" priority="high" />
+			<HeroSlider client:load />
+			<Franquicia />
+		</div>
+		
+		<OrderStatusCard />
 
-			<!-- CARRUSELES DINÁMICOS (cargados en cliente, siempre frescos) -->
-			<div id="products-section" class="w-full overflow-hidden">
-				<SlidersLoader client:load />
-			</div>
+		<!-- CARRUSELES DINÁMICOS (cargados en cliente, siempre frescos) -->
+		<div id="products-section" class="w-full overflow-hidden flex flex-col items-center">
+			<SlidersLoader client:load />
+		</div>
 
-			<div class="container">
-				<Footer />
-			</div>
-		</main>
+		<div class="w-full max-w-[500px] mx-auto px-4 mt-auto">
+			<Footer />
+		</div>
+	</main>
 
-		<CartIcon client:load franchise={franchise} />
-		<CartDrawer client:load />
-		<NewsletterModal client:load />
-	</DesktopGate>
+	<CartIcon client:load franchise={franchise} />
+	<CartDrawer client:load />
+	<NewsletterModal client:load />
 </Layout>

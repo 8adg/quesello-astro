@@ -32,6 +32,7 @@ const lastDayOfPrevMonth = new Date(
 const { data: salesNow } = await supabase
 	.from("presupuestos")
 	.select("total, estado")
+	.eq("franquicia_id", 1)
 	.gte("creado_en", firstDayOfMonth);
 const currentTotal =
 	salesNow?.reduce((acc, o) => {
@@ -43,23 +44,36 @@ const currentTotal =
 const { data: salesPrev } = await supabase
 	.from("presupuestos")
 	.select("total, estado")
+	.eq("franquicia_id", 1)
 	.gte("creado_en", firstDayOfPrevMonth)
 	.lte("creado_en", lastDayOfPrevMonth);
 const prevTotal =
 	salesPrev?.reduce((acc, o) => {
 		if (o.estado === "PAUSADO" || o.estado === "PENDIENTE") return acc;
 		return acc + (o.total || 0);
-	}, 0) || 1; // Evitar división por cero
-const growth = Math.round(((currentTotal - prevTotal) / prevTotal) * 100);
+	}, 0) || 0;
+
+let growth = 0;
+if (prevTotal > 0) {
+	const rawGrowth = ((currentTotal - prevTotal) / prevTotal) * 100;
+	growth = Math.abs(rawGrowth) < 10
+		? parseFloat(rawGrowth.toFixed(1))
+		: Math.round(rawGrowth);
+} else if (currentTotal > 0) {
+	growth = 100;
+}
 
 // 3. Conteo de Estados
 const { count: pendingCount } = await supabase
 	.from("presupuestos")
 	.select("*", { count: "exact", head: true })
-	.neq("estado", "ENTREGADO");
+	.eq("franquicia_id", 1)
+	.neq("estado", "ENTREGADO")
+	.gte("creado_en", firstDayOfMonth);
 const { count: deliveredCount } = await supabase
 	.from("presupuestos")
 	.select("*", { count: "exact", head: true })
+	.eq("franquicia_id", 1)
 	.eq("estado", "ENTREGADO")
 	.gte("creado_en", firstDayOfMonth);
 const { count: productsCount } = await supabase
@@ -72,7 +86,9 @@ const { count: productsCount } = await supabase
 const { data: recent } = await supabase
 	.from("presupuestos")
 	.select("cliente, estado, creado_en")
+	.eq("franquicia_id", 1)
 	.neq("estado", "ENTREGADO")
+	.gte("creado_en", firstDayOfMonth)
 	.order("creado_en", { ascending: false })
 	.limit(2);
 ---
@@ -94,7 +110,7 @@ const { data: recent } = await supabase
 				style="background: rgba(74, 85, 104, 0.05); padding: 10px 20px; border-radius: 20px; font-weight: 700; color: #4A5568; display: flex; align-items: center; gap: 8px; margin-bottom: 10px; text-transform: capitalize;"
 			>
 				<img
-					src="https://api.iconify.design/lucide:calendar.svg?color=%23FF5E5E"
+					src="https://api.iconify.design/lucide/calendar.svg?color=%23FF5E5E"
 					width="18"
 				/>
 				{currentMonthName}
@@ -113,10 +129,11 @@ const { data: recent } = await supabase
 						>VENTAS NETAS</span
 					>
 					<span
-						style={`color: ${growth >= 0 ? "#00B67A" : "#FF5E5E"}; font-weight: 700; fontSize: 14px;`}
+						title={`Ventas mes anterior: $${prevTotal.toLocaleString("es-AR")}`}
+						style={`color: ${growth >= 0 ? "#00B67A" : "#FF5E5E"}; font-weight: 700; font-size: 14px; cursor: default;`}
 					>
 						{growth >= 0 ? "▲" : "▼"}
-						{growth >= 0 ? "+" : ""}{growth}% este mes
+						{growth >= 0 ? "+" : ""}{growth}% vs mes anterior
 					</span>
 				</div>
 			</div>

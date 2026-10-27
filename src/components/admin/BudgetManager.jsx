@@ -4,6 +4,7 @@ import BudgetEditor from './BudgetEditor';
 import MpReconciliation from './MpReconciliation';
 import { supabase } from '../../lib/supabase';
 import PrintModal from './PrintModal';
+import { deleteOrderSvgFile } from './svgOrderUtils';
 
 export default function BudgetManager() {
   const [view, setView] = useState('list'); // 'list' | 'editor'
@@ -43,9 +44,13 @@ export default function BudgetManager() {
     if (!deletingId) return;
     setLoading(true);
     try {
+        const targetOrder = orders.find(o => o.id === deletingId);
+        if (targetOrder) {
+          await deleteOrderSvgFile(targetOrder);
+        }
         await supabase.from('presupuesto_items').delete().eq('presupuesto_id', deletingId);
         await supabase.from('presupuestos').delete().eq('id', deletingId);
-        showToast("Pedido eliminado correctamente");
+        showToast("Pedido y archivo SVG eliminados correctamente");
         loadOrders();
     } catch (e) {
         showToast("Error al eliminar pedido");
@@ -186,6 +191,7 @@ export default function BudgetManager() {
             total={order.total}
             pagado={order.pagado}
             estado={order.estado}
+            observaciones={order.observaciones}
             onEdit={() => { setEditingOrder(order); setView('editor'); }}
             onRefresh={loadOrders}
             onPrint={() => setPrintingOrder(order)}

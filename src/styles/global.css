@@ -1,11 +1,20 @@
+@import url('https://fonts.googleapis.com/css2?family=Aleo:ital,wght@0,400;0,700;1,400&family=Comfortaa:wght@400;700&family=Figtree:wght@400;600;700;800&family=Fredoka:wght@600;700&family=Great+Vibes&family=Mukta+Mahee:wght@400;600;700&family=Patrick+Hand&family=Playwrite+DK+Uloopet&family=Quicksand:wght@500;600;700&family=Roboto:wght@400;500;700&display=swap');
 @import "tailwindcss";
 
 @font-face {
-    font-family: 'Quesello'; 
-    src: url('/fuentes/quesello.woff2') format('woff2'); 
-    font-weight: normal;
-    font-style: normal;
-    font-display: swap;
+  font-family: 'Quesello';
+  src: url('/fuentes/quesello.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Amaze';
+  src: url('/fuentes/Amaze.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
 }
 
 @theme {
@@ -14,7 +23,7 @@
 }
 
 :root {
-  --bg: #EDE8D3;
+  --bg: #eae5cf;
   --bg-cart: #E2E8C0;
   --primary: #FF5555;
   --whatsapp: #25D366;
@@ -29,6 +38,10 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 html,
 body {
   background-color: var(--bg);
@@ -36,7 +49,7 @@ body {
   font-family: var(--font-inter), sans-serif;
   font-size: 16px;
   line-height: 20px;
-  /* overflow-x: hidden; */ /* Desactivado para permitir sticky sidebar */
+  overflow-x: clip;
 }
 
 /* ── TIPOGRAFÍA ── */
@@ -239,7 +252,11 @@ p {
   position: fixed;
   bottom: -100%;
   left: 0;
+  right: 0;
+  margin-left: auto;
+  margin-right: auto;
   width: 100%;
+  max-width: 560px;
   background: #ebebea;
   z-index: 3001;
   border-radius: 24px 24px 0 0;
@@ -256,12 +273,15 @@ p {
 .cart-item-list {
   flex: 1;
   overflow-y: auto;
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE 10+ */
+  scrollbar-width: none;
+  /* Firefox */
+  -ms-overflow-style: none;
+  /* IE 10+ */
 }
 
 .cart-item-list::-webkit-scrollbar {
-  display: none; /* Chrome, Safari, Opera */
+  display: none;
+  /* Chrome, Safari, Opera */
 }
 
 .cart-drawer--open {
@@ -362,12 +382,16 @@ p {
 
 .site-footer {
   width: 100%;
+  max-width: 480px;
+  margin-left: auto;
+  margin-right: auto;
   padding: 40px 20px 60px 20px;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 24px;
   background-color: var(--bg);
+  box-sizing: border-box;
 }
 
 .footer-socials {

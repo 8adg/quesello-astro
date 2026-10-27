@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
+import { getOrderSvgUrl, getOrderDjUrl, cleanObservacionesText, mergeObservacionesWithSvg, downloadSvgDirect, downloadPdfDirect } from './svgOrderUtils';
 
 const BudgetEditor = ({ editingOrder, onSave, onCancel }) => {
   const [catalogo, setCatalogo] = useState([]);
@@ -8,6 +9,8 @@ const BudgetEditor = ({ editingOrder, onSave, onCancel }) => {
   
   const [cliente, setCliente] = useState("");
   const [observaciones, setObservaciones] = useState("");
+  const [svgUrl, setSvgUrl] = useState(null);
+  const [djUrl, setDjUrl] = useState(null);
   const [fecha, setFecha] = useState("");
   const [retiro, setRetiro] = useState("");
   const [estado, setEstado] = useState("PENDIENTE");
@@ -24,13 +27,18 @@ const BudgetEditor = ({ editingOrder, onSave, onCancel }) => {
     loadCatalogo();
     if (editingOrder) {
       setCliente(editingOrder.cliente || "");
-      setObservaciones(editingOrder.observaciones || "");
+      const rawObs = editingOrder.observaciones || "";
+      setSvgUrl(getOrderSvgUrl(editingOrder));
+      setDjUrl(getOrderDjUrl(editingOrder));
+      setObservaciones(cleanObservacionesText(rawObs));
       setFecha(editingOrder.fecha || "");
       setRetiro(editingOrder.retiro_sugerido || "");
       setEstado(editingOrder.estado || "PENDIENTE");
       setPagado(!!editingOrder.pagado);
       loadItems(editingOrder.id);
     } else {
+      setSvgUrl(null);
+      setDjUrl(null);
       setFecha(new Date().toLocaleDateString('es-AR'));
     }
   }, [editingOrder]);
@@ -92,7 +100,7 @@ const BudgetEditor = ({ editingOrder, onSave, onCancel }) => {
 
       const budgetData = {
         cliente: cliente.toUpperCase(),
-        observaciones: observaciones.toUpperCase(),
+        observaciones: mergeObservacionesWithSvg(observaciones, svgUrl, djUrl),
         fecha,
         retiro_sugerido: retiro,
         pagado,
@@ -151,7 +159,63 @@ const BudgetEditor = ({ editingOrder, onSave, onCancel }) => {
           <input type="text" placeholder="CLIENTE" value={cliente} onChange={e => setCliente(e.target.value)} style={{ ...inputStyle, fontWeight: 'bold' }} />
           <input type="text" placeholder="FECHA" value={fecha} onChange={e => setFecha(e.target.value)} style={inputStyle} />
         </div>
-        <textarea placeholder="OBSERVACIONES" value={observaciones} onChange={e => setObservaciones(e.target.value)} style={{ ...inputStyle, height: '50px' }} />
+        <textarea placeholder="OBSERVACIONES" value={observaciones} onChange={e => setObservaciones(e.target.value)} style={{ ...inputStyle, height: '60px' }} />
+        {svgUrl && (
+          <div style={{ marginBottom: '10px' }}>
+            <button
+              type="button"
+              onClick={() => downloadSvgDirect(svgUrl, `sello_${editingOrder?.numero || 'vector'}.svg`)}
+              style={{
+                width: '100%',
+                padding: '11px 16px',
+                borderRadius: '12px',
+                border: '1.5px solid #FCA5A5',
+                background: '#FEF2F2',
+                color: '#DC2626',
+                fontWeight: 800,
+                fontSize: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                cursor: 'pointer',
+                boxShadow: '0 2px 8px rgba(220, 38, 38, 0.08)',
+                fontFamily: 'Inter'
+              }}
+            >
+              <img src="https://api.iconify.design/lucide/download.svg?color=%23DC2626" style={{ width: '16px', height: '16px' }} alt="Descargar" />
+              <span>DESCARGAR ARCHIVO SVG (INKSCAPE / LÁSER)</span>
+            </button>
+          </div>
+        )}
+        {djUrl && (
+          <div style={{ marginBottom: '10px' }}>
+            <button
+              type="button"
+              onClick={() => downloadPdfDirect(djUrl, `declaracion_jurada_${editingOrder?.numero || 'doc'}.pdf`)}
+              style={{
+                width: '100%',
+                padding: '11px 16px',
+                borderRadius: '12px',
+                border: '1.5px solid #93C5FD',
+                background: '#EFF6FF',
+                color: '#1D4ED8',
+                fontWeight: 800,
+                fontSize: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                cursor: 'pointer',
+                boxShadow: '0 2px 8px rgba(29, 78, 216, 0.08)',
+                fontFamily: 'Inter'
+              }}
+            >
+              <img src="https://api.iconify.design/lucide/file-text.svg?color=%231D4ED8" style={{ width: '16px', height: '16px' }} alt="DJ PDF" />
+              <span>DESCARGAR DECLARACIÓN JURADA (PDF)</span>
+            </button>
+          </div>
+        )}
         <div style={{ marginBottom: '10px' }}>
           <label style={{ fontSize: '10px', fontWeight: 800 }}>RETIRO SUGERIDO</label>
           <input type="datetime-local" value={retiro} onChange={e => setRetiro(e.target.value)} style={inputStyle} />

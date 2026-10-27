@@ -66,13 +66,25 @@ const image = rawImage.startsWith('http') ? rawImage : `https://quesello.com.ar$
 		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 		<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Outfit:wght@700&family=Indie+Flower&display=swap" rel="stylesheet">
 
-		<!-- PWA Service Worker -->
+		<!-- PWA Service Worker (solo en dominio de producción; en localhost desactiva y purga para no cachear código de desarrollo) -->
 		<script src="https://unpkg.com/aos@next/dist/aos.js" is:inline></script>
 		<script is:inline>
 			if ('serviceWorker' in navigator) {
-				window.addEventListener('load', () => {
-					navigator.serviceWorker.register('/sw.js');
-				});
+				const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.port;
+				if (isLocal) {
+					navigator.serviceWorker.getRegistrations().then(regs => {
+						for (const reg of regs) reg.unregister();
+					});
+					if ('caches' in window) {
+						caches.keys().then(keys => {
+							for (const k of keys) caches.delete(k);
+						});
+					}
+				} else {
+					window.addEventListener('load', () => {
+						navigator.serviceWorker.register('/sw.js');
+					});
+				}
 			}
 			
 			// Inicializar AOS

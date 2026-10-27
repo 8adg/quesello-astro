@@ -1,11 +1,15 @@
 import React, { useState } from 'react';
 import { handleDirectMeowPrint, handleClientSidePDF } from '../../lib/printUtils';
+import { getOrderSvgUrl, downloadSvgDirect, getOrderDjUrl, downloadPdfDirect } from './svgOrderUtils';
 
 export default function PrintModal({ order, onClose }) {
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState(null);
 
   if (!order) return null;
+
+  const svgUrl = getOrderSvgUrl(order);
+  const djUrl = getOrderDjUrl(order);
 
   return (
     <div style={{
@@ -89,6 +93,54 @@ export default function PrintModal({ order, onClose }) {
             <img src="https://api.iconify.design/lucide/file-text.svg?color=%23FF5E5E" style={{ width: '20px' }} alt="" />
             Descargar PDF Termico
           </button>
+
+          {svgUrl && (
+            <button
+              onClick={() => downloadSvgDirect(svgUrl, `sello_${order.numero || 'vector'}.svg`)}
+              disabled={loading}
+              style={{
+                padding: '16px',
+                borderRadius: '20px',
+                background: '#FEF2F2',
+                color: '#DC2626',
+                border: '1.5px solid #FCA5A5',
+                fontWeight: 600,
+                fontSize: '15px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '10px'
+              }}
+            >
+              <img src="https://api.iconify.design/lucide/download.svg?color=%23DC2626" style={{ width: '18px', height: '18px' }} alt="" />
+              Descargar Archivo SVG (Láser / Inkscape)
+            </button>
+          )}
+
+          {djUrl && (
+            <button
+              onClick={() => downloadPdfDirect(djUrl, `declaracion_jurada_${order.numero || 'pedido'}.pdf`)}
+              disabled={loading}
+              style={{
+                padding: '16px',
+                borderRadius: '20px',
+                background: '#EFF6FF',
+                color: '#1D4ED8',
+                border: '1.5px solid #93C5FD',
+                fontWeight: 600,
+                fontSize: '15px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '10px'
+              }}
+            >
+              <img src="https://api.iconify.design/lucide/file-text.svg?color=%231D4ED8" style={{ width: '18px', height: '18px' }} alt="" />
+              Descargar Declaración Jurada (PDF)
+            </button>
+          )}
         </div>
 
         {/* Feedback de Estado */}

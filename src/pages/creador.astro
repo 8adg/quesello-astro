@@ -1,0 +1,44 @@
+---
+import Layout from "../layouts/Layout.astro";
+import TopNav from "../components/TopNav.astro";
+import Header from "../components/Header.astro";
+import Footer from "../components/Footer.astro";
+import StampDesignerApp from "../components/creador/StampDesignerApp.jsx";
+import { CartDrawer } from "../components/Cart.jsx";
+import { supabase } from "../lib/supabase";
+
+const title = "Creador de Sellos Personalizados - Queselló!";
+const description = "Diseña tu sello automático personalizado online. Categorías Escolar y Profesional con vista previa en tiempo real y tipografías exclusivas.";
+
+// Checkout escolar y profesional unificado hacia /gracias
+let franchise = { id: 1, nombre: "Central Queselló", whatsapp: "5492235203360" };
+try {
+	const { data: centralFranchise } = await supabase
+		.from("franquicias")
+		.select("*")
+		.eq("id", 1)
+		.single();
+	if (centralFranchise) franchise = centralFranchise;
+} catch (e) {
+	// Fallback por defecto
+}
+---
+
+<Layout title={title} description={description}>
+	<div class="w-full min-h-screen flex flex-col bg-[#EDE8D3]">
+		
+		<!-- Aplicación Interactiva del Diseñador de Sellos -->
+		<main class="w-full flex-1">
+			<StampDesignerApp client:load />
+		</main>
+
+		<!-- Pie de Página -->
+		<div class="mx-auto px-4 mt-auto" style="display: flex; justify-content: center; width: 100%;">
+			<Footer />
+		</div>
+
+		<!-- Drawer del carrito (el ícono va en la barra superior del creador) -->
+		<CartDrawer client:load />
+
+	</div>
+</Layout>

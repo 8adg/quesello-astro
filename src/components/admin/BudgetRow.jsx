@@ -1,8 +1,13 @@
 import React, { useState } from 'react';
 import { supabase } from '../../lib/supabase';
+import { getOrderSvgUrl, getOrderDjUrl, downloadSvgDirect, downloadPdfDirect } from './svgOrderUtils';
 
-export default function BudgetRow({ id_db, numero, cliente, retiro, total, pagado, estado, onEdit, onRefresh, onPrint, onDelete }) {
+export default function BudgetRow({ id_db, numero, cliente, retiro, total, pagado, estado, observaciones, onEdit, onRefresh, onPrint, onDelete }) {
   const [updating, setUpdating] = useState(false);
+
+  // Buscar enlace al archivo SVG y PDF de DJ en las observaciones o fallback en Storage
+  const svgUrl = getOrderSvgUrl(observaciones, numero, cliente);
+  const djUrl = getOrderDjUrl(observaciones, numero, cliente);
 
   const togglePago = async () => {
     setUpdating(true);
@@ -88,7 +93,57 @@ export default function BudgetRow({ id_db, numero, cliente, retiro, total, pagad
       </div>
 
       {/* Acciones */}
-      <div style={{ display: 'flex', gap: '8px', width: '130px', justifyContent: 'center' }}>
+      <div style={{ display: 'flex', gap: '8px', minWidth: '200px', justifyContent: 'center', alignItems: 'center' }}>
+        {svgUrl && (
+          <button
+            type="button"
+            onClick={() => downloadSvgDirect(svgUrl, `sello_${numero}.svg`)}
+            title="Descargar SVG de producción para Inkscape (Láser)"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '4px',
+              height: '32px',
+              padding: '0 8px',
+              borderRadius: '10px',
+              background: '#FEE2E2',
+              border: '1px solid #FCA5A5',
+              color: '#DC2626',
+              fontSize: '11px',
+              fontWeight: 800,
+              cursor: 'pointer'
+            }}
+          >
+            <img src="https://api.iconify.design/lucide/download.svg?color=%23DC2626" style={{ width: '14px', height: '14px' }} alt="Descargar SVG" />
+            <span>SVG</span>
+          </button>
+        )}
+        {djUrl && (
+          <button
+            type="button"
+            onClick={() => downloadPdfDirect(djUrl, `declaracion_jurada_${numero}.pdf`)}
+            title="Descargar Declaración Jurada de Autenticidad (PDF)"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '4px',
+              height: '32px',
+              padding: '0 8px',
+              borderRadius: '10px',
+              background: '#EFF6FF',
+              border: '1px solid #93C5FD',
+              color: '#1D4ED8',
+              fontSize: '11px',
+              fontWeight: 800,
+              cursor: 'pointer'
+            }}
+          >
+            <img src="https://api.iconify.design/lucide/file-text.svg?color=%231D4ED8" style={{ width: '14px', height: '14px' }} alt="Descargar DJ" />
+            <span>DJ</span>
+          </button>
+        )}
         <button onClick={onEdit} style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '5px' }}>
           <img src="https://api.iconify.design/lucide/edit-3.svg?color=%231a202c" style={{ width: '22px' }} alt="Edit" />
         </button>
