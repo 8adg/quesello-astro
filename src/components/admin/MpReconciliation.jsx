@@ -242,7 +242,7 @@ export default function MpReconciliation({ onBack }) {
               backgroundColor: 'rgba(74, 85, 104, 0.05)'
             }}
           >
-            <img src="https://api.iconify.design/lucide:arrow-left.svg?color=%23FF5E5E" style={{ width: '22px', height: '22px' }} alt="Volver" />
+            <img src="https://api.iconify.design/lucide/arrow-left.svg?color=%23FF5E5E" style={{ width: '22px', height: '22px' }} alt="Volver" />
           </button>
           <h1 style={{ fontSize: '28px', color: '#FF5E5E', fontWeight: 800, margin: 0 }}>Conciliación Mercado Pago</h1>
         </div>
@@ -308,7 +308,7 @@ export default function MpReconciliation({ onBack }) {
             justifyContent: 'center'
           }}
         >
-          <img src="https://api.iconify.design/lucide:refresh-cw.svg?color=%234b3b28" style={{ width: '18px', height: '18px' }} alt="Sincronizar" />
+          <img src="https://api.iconify.design/lucide/refresh-cw.svg?color=%234b3b28" style={{ width: '18px', height: '18px' }} alt="Sincronizar" />
         </button>
       </div>
 
@@ -455,7 +455,7 @@ export default function MpReconciliation({ onBack }) {
                               fontWeight: 800, cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: '5px' 
                             }}
                           >
-                            <img src="https://api.iconify.design/lucide:link.svg?color=%23FF5E5E" style={{ width: '14px', height: '14px' }} alt="" />
+                            <img src="https://api.iconify.design/lucide/link.svg?color=%23FF5E5E" style={{ width: '14px', height: '14px' }} alt="" />
                             Vincular manualmente un presupuesto
                           </button>
                         ) : (
@@ -553,7 +553,7 @@ export default function MpReconciliation({ onBack }) {
                             boxShadow: '0 2px 5px rgba(0,0,0,0.02)'
                           }}
                         >
-                          <img src="https://api.iconify.design/lucide:unlink.svg?color=%23DC2626" style={{ width: '14px', height: '14px' }} alt="" />
+                          <img src="https://api.iconify.design/lucide/unlink.svg?color=%23DC2626" style={{ width: '14px', height: '14px' }} alt="" />
                           Desvincular
                         </button>
                       </div>
