@@ -1,6 +1,7 @@
 import { atom, computed } from 'nanostores';
 import { persistentAtom } from '@nanostores/persistent';
 import { supabaseAdmin } from '../lib/supabase';
+import { notifyNewWebOrder } from '../lib/pushNotifications';
 
 // Estado persistente: los items del carrito
 export const $cartItems = persistentAtom('quesello_cart', [], {
@@ -125,6 +126,14 @@ export const processOrder = async () => {
 
     const { error: iError } = await supabaseAdmin.from("presupuesto_items").insert(itemsToInsert);
     if (iError) throw iError;
+
+    // Disparar notificación Web Push al celular del Admin incluso si el cliente luego cierra WhatsApp
+    await notifyNewWebOrder({
+      orderNumber: tempId,
+      clientName: name.toUpperCase(),
+      total: total,
+      summary: items.map(it => `${it.quantity}x ${it.descripcion}`).join(', ')
+    });
 
     const fullMsg = generateWhatsAppMessage(name, items, total);
     window.open(`https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(fullMsg)}`, "_blank");

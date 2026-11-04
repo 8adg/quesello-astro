@@ -5,6 +5,7 @@ import StampCanvasPreview from './StampCanvasPreview';
 import Icon from './Icon';
 import { formatPrice } from './useStampProducts';
 import { generateDeclaracionJuradaPDF } from '../../lib/declaracionJuradaGenerator';
+import { notifyNewWebOrder } from '../../lib/pushNotifications';
 
 export default function OrderConfirmationModal({
   isOpen,
@@ -172,6 +173,15 @@ export default function OrderConfirmationModal({
         total: price
       }]);
       if (itemError) console.warn('Error al guardar items:', itemError);
+
+      // 6b. Notificar al celular del Admin vía Web Push nativo
+      await notifyNewWebOrder({
+        orderNumber: finalNro,
+        clientName: fullName.toUpperCase(),
+        total: price,
+        summary: productName,
+        phone: telefono.trim()
+      });
 
       // 7. Redirigir a la página de confirmación /gracias
       const destUrl = `/gracias?pedido=${encodeURIComponent(finalNro)}&cliente=${encodeURIComponent(fullName.toUpperCase())}&total=${price}`;

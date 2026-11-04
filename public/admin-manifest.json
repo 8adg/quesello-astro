@@ -1,0 +1,50 @@
+{
+  "name": "Queselló! Admin - Gestión de Pedidos",
+  "short_name": "Queselló Admin",
+  "description": "Panel de gestión de pedidos y presupuestos de Queselló.",
+  "start_url": "/admin/presupuestos",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#EAE5D3",
+  "theme_color": "#EAE5D3",
+  "icons": [
+    {
+      "src": "/iconos/92.png",
+      "sizes": "92x92",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/iconos/144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/iconos/192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/iconos/192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/iconos/512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/iconos/512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
+

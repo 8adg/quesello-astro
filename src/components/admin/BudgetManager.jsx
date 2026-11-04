@@ -7,12 +7,12 @@ import PrintModal from './PrintModal';
 import { deleteOrderSvgFile } from './svgOrderUtils';
 
 export default function BudgetManager() {
-  const [view, setView] = useState('list'); // 'list' | 'editor'
+  const [view, setView] = useState('list'); // 'list' | 'editor' | 'reconciliation'
   const [orders, setOrders] = useState([]);
   const [editingOrder, setEditingOrder] = useState(null);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState('');
   const [printingOrder, setPrintingOrder] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
   const [toast, setToast] = useState(null);
@@ -25,12 +25,18 @@ export default function BudgetManager() {
       .channel('realtime_budgets')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'presupuestos' }, () => loadOrders())
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const loadOrders = async () => {
     setLoading(true);
-    const { data } = await supabase.from('presupuestos').select('*').eq('franquicia_id', FRANQUICIA_ID).order('id', { ascending: false });
+    const { data } = await supabase
+      .from('presupuestos')
+      .select('*')
+      .eq('franquicia_id', FRANQUICIA_ID)
+      .order('id', { ascending: false });
     if (data) setOrders(data);
     setLoading(false);
   };
@@ -44,40 +50,49 @@ export default function BudgetManager() {
     if (!deletingId) return;
     setLoading(true);
     try {
-        const targetOrder = orders.find(o => o.id === deletingId);
-        if (targetOrder) {
-          await deleteOrderSvgFile(targetOrder);
-        }
-        await supabase.from('presupuesto_items').delete().eq('presupuesto_id', deletingId);
-        await supabase.from('presupuestos').delete().eq('id', deletingId);
-        showToast("Pedido y archivo SVG eliminados correctamente");
-        loadOrders();
+      const targetOrder = orders.find((o) => o.id === deletingId);
+      if (targetOrder) {
+        await deleteOrderSvgFile(targetOrder);
+      }
+      await supabase.from('presupuesto_items').delete().eq('presupuesto_id', deletingId);
+      await supabase.from('presupuestos').delete().eq('id', deletingId);
+      showToast('Pedido y archivo SVG eliminados correctamente');
+      loadOrders();
     } catch (e) {
-        showToast("Error al eliminar pedido");
+      showToast('Error al eliminar pedido');
     } finally {
-        setDeletingId(null);
-        setLoading(false);
+      setDeletingId(null);
+      setLoading(false);
     }
   };
 
   const handleSave = () => {
     setView('list');
-    showToast("Pedido guardado con éxito");
+    showToast('Pedido guardado con éxito');
     loadOrders();
   };
-  
+
   const months = [
-    { id: 0, name: "ENERO" }, { id: 1, name: "FEBRERO" }, { id: 2, name: "MARZO" },
-    { id: 3, name: "ABRIL" }, { id: 4, name: "MAYO" }, { id: 5, name: "JUNIO" },
-    { id: 6, name: "JULIO" }, { id: 7, name: "AGOSTO" }, { id: 8, name: "SEPTIEMBRE" },
-    { id: 9, name: "OCTUBRE" }, { id: 10, name: "NOVIEMBRE" }, { id: 11, name: "DICIEMBRE" }
+    { id: 0, name: 'ENERO' },
+    { id: 1, name: 'FEBRERO' },
+    { id: 2, name: 'MARZO' },
+    { id: 3, name: 'ABRIL' },
+    { id: 4, name: 'MAYO' },
+    { id: 5, name: 'JUNIO' },
+    { id: 6, name: 'JULIO' },
+    { id: 7, name: 'AGOSTO' },
+    { id: 8, name: 'SEPTIEMBRE' },
+    { id: 9, name: 'OCTUBRE' },
+    { id: 10, name: 'NOVIEMBRE' },
+    { id: 11, name: 'DICIEMBRE' },
   ];
 
-  const filteredOrders = orders.filter(o => {
+  const filteredOrders = orders.filter((o) => {
     const term = searchTerm.toLowerCase();
-    const matchesSearch = o.cliente?.toLowerCase().includes(term) || o.numero?.toString().includes(term);
-    
-    if (selectedMonth === "ALL") return matchesSearch;
+    const matchesSearch =
+      o.cliente?.toLowerCase().includes(term) || o.numero?.toString().toLowerCase().includes(term);
+
+    if (selectedMonth === 'ALL') return matchesSearch;
 
     if (o.fecha) {
       const parts = o.fecha.split('/');
@@ -85,7 +100,6 @@ export default function BudgetManager() {
         const m = parseInt(parts[1]) - 1;
         return matchesSearch && m === selectedMonth;
       }
-      // Fallback para ISO
       const d = new Date(o.fecha);
       if (!isNaN(d.getTime())) {
         return matchesSearch && d.getMonth() === selectedMonth;
@@ -94,14 +108,15 @@ export default function BudgetManager() {
     return matchesSearch;
   });
 
+  const totalSalesAmount = filteredOrders.reduce((acc, o) => {
+    if (o.estado === 'PAUSADO' || o.estado === 'PENDIENTE') return acc;
+    return acc + (o.total || 0);
+  }, 0);
+
   if (view === 'editor') {
     return (
-      <div style={{ height: '100%', overflow: 'hidden' }}>
-        <BudgetEditor 
-          editingOrder={editingOrder} 
-          onSave={handleSave} 
-          onCancel={() => setView('list')} 
-        />
+      <div className="budget-editor-wrapper">
+        <BudgetEditor editingOrder={editingOrder} onSave={handleSave} onCancel={() => setView('list')} />
       </div>
     );
   }
@@ -116,73 +131,127 @@ export default function BudgetManager() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', fontFamily: 'Inter', position: 'relative' }}>
-      
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+      {/* HEADER DESKTOP */}
+      <header className="bm-desktop-header">
         <h1 style={{ fontSize: '28px', color: '#FF5E5E', fontWeight: 800, margin: 0 }}>Presupuestos</h1>
         <div style={{ display: 'flex', gap: '10px' }}>
-          <button 
-            onClick={() => setView('reconciliation')} 
-            style={{ 
-              background: '#F4F1E1', 
-              color: '#8B1E1E', 
-              border: 'none', 
-              padding: '12px 25px', 
-              borderRadius: '18px', 
-              fontWeight: 800, 
-              cursor: 'pointer' 
+          <button
+            onClick={() => setView('reconciliation')}
+            style={{
+              background: '#F4F1E1',
+              color: '#8B1E1E',
+              border: 'none',
+              padding: '12px 25px',
+              borderRadius: '18px',
+              fontWeight: 800,
+              cursor: 'pointer',
             }}
           >
             Conciliar Pagos
           </button>
-          <button onClick={() => { setEditingOrder(null); setView('editor'); }} style={{ background: '#FF5E5E', color: 'white', border: 'none', padding: '12px 25px', borderRadius: '18px', fontWeight: 500, cursor: 'pointer' }}>+ Nuevo pedido</button>
+          <button
+            onClick={() => {
+              setEditingOrder(null);
+              setView('editor');
+            }}
+            style={{
+              background: '#FF5E5E',
+              color: 'white',
+              border: 'none',
+              padding: '12px 25px',
+              borderRadius: '18px',
+              fontWeight: 500,
+              cursor: 'pointer',
+            }}
+          >
+            + Nuevo pedido
+          </button>
         </div>
       </header>
 
-      <hr style={{ border: 'none', height: '2px', background: '#aba9a4', opacity: 0.2, margin: '24px 0' }} />
+      <hr className="bm-desktop-divider" />
 
-      <div style={{ display: 'flex', gap: '15px', marginBottom: '25px', alignItems: 'center' }}>
-        <input type="text" placeholder="Buscar presupuesto..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} style={{ flex: 1, padding: '14px 20px', borderRadius: '18px', border: '2px solid #EDF2F7', background: 'white', fontSize: '15px', outline: 'none' }} />
-        
-        {/* SELECTOR DE MES */}
-        <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-          <select 
-            value={selectedMonth} 
-            onChange={(e) => setSelectedMonth(e.target.value === "ALL" ? "ALL" : parseInt(e.target.value))}
-            style={{ 
-              appearance: 'none',
-              background: '#F4F1E1', 
-              color: '#991B1B', 
-              padding: '14px 45px 14px 25px', 
-              borderRadius: '22px', 
-              border: 'none',
-              fontWeight: 800, 
-              fontSize: '16px', 
-              cursor: 'pointer',
-              outline: 'none',
-              fontFamily: 'Inter',
-              textAlign: 'center'
-            }}
-          >
-            <option value="ALL">TODOS LOS MESES</option>
-            {months.map(m => (
-              <option key={m.id} value={m.id}>{m.name}</option>
-            ))}
-          </select>
-          <div style={{ position: 'absolute', right: '20px', pointerEvents: 'none', color: '#991B1B', fontSize: '10px', opacity: 0.5 }}>▼</div>
+      {/* CONTROLES DE BÚSQUEDA Y FILTRO (ADAPTADO A LA CAPTURA EN MOBILE) */}
+      <div className="bm-filters-bar">
+        <input
+          type="text"
+          placeholder="Buscar presupuesto..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="bm-search-input"
+        />
+
+        <div className="bm-month-and-total">
+          {/* SELECTOR DE MES */}
+          <div className="bm-month-select-wrap">
+            <select
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value === 'ALL' ? 'ALL' : parseInt(e.target.value))}
+              className="bm-month-select"
+            >
+              <option value="ALL">TODOS</option>
+              {months.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name}
+                </option>
+              ))}
+            </select>
+            <div className="bm-month-arrow">▼</div>
+          </div>
+
+          <div className="bm-total-pill">
+            TOTAL VENTAS: $ {totalSalesAmount.toLocaleString('es-AR')}
+          </div>
         </div>
 
-        <div style={{ background: '#F4F1E1', padding: '14px 25px', borderRadius: '18px', color: '#4b3b28', fontWeight: 800, fontSize: '16px', display: 'flex', alignItems: 'center' }}>
-          TOTAL VENTAS: $ {filteredOrders.reduce((acc, o) => {
-            if (o.estado === 'PAUSADO' || o.estado === 'PENDIENTE') return acc;
-            return acc + (o.total || 0);
-          }, 0).toLocaleString('es-AR')}
+        {/* Botones rápidos en Mobile (Conciliar Pagos y + Nuevo pedido) */}
+        <div className="bm-mobile-actions">
+          <button
+            type="button"
+            onClick={() => setView('reconciliation')}
+            style={{
+              flex: 1,
+              background: '#F4F1E1',
+              color: '#8B1E1E',
+              border: '1px solid rgba(139,30,30,0.12)',
+              padding: '10px 12px',
+              borderRadius: '14px',
+              fontWeight: 800,
+              fontSize: '12.5px',
+              cursor: 'pointer',
+              fontFamily: 'Inter, sans-serif',
+            }}
+          >
+            💳 Conciliar MP
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setEditingOrder(null);
+              setView('editor');
+            }}
+            style={{
+              flex: 1,
+              background: '#FF5E5E',
+              color: 'white',
+              border: 'none',
+              padding: '10px 12px',
+              borderRadius: '14px',
+              fontWeight: 700,
+              fontSize: '12.5px',
+              cursor: 'pointer',
+              fontFamily: 'Inter, sans-serif',
+            }}
+          >
+            + Nuevo pedido
+          </button>
         </div>
       </div>
 
       {/* Lista de Pedidos */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', paddingBottom: '30px' }}>
-        {filteredOrders.map(order => (
-          <BudgetRow 
+      <div className="bm-orders-list">
+        {filteredOrders.map((order) => (
+          <BudgetRow
             key={order.id}
             id_db={order.id}
             numero={order.numero}
@@ -192,7 +261,10 @@ export default function BudgetManager() {
             pagado={order.pagado}
             estado={order.estado}
             observaciones={order.observaciones}
-            onEdit={() => { setEditingOrder(order); setView('editor'); }}
+            onEdit={() => {
+              setEditingOrder(order);
+              setView('editor');
+            }}
             onRefresh={loadOrders}
             onPrint={() => setPrintingOrder(order)}
             onDelete={() => setDeletingId(order.id)}
@@ -202,14 +274,80 @@ export default function BudgetManager() {
 
       {/* MODAL DE CONFIRMACIÓN DE BORRADO */}
       {deletingId && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div style={{ background: 'white', padding: '35px', borderRadius: '30px', width: '320px', textAlign: 'center', boxShadow: '0 20px 50px rgba(0,0,0,0.2)' }}>
-            <div style={{ background: '#FEE2E2', color: '#DC2626', width: '60px', height: '60px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px auto', fontSize: '24px' }}>🗑️</div>
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.8)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '20px',
+          }}
+        >
+          <div
+            style={{
+              background: 'white',
+              padding: '35px',
+              borderRadius: '30px',
+              width: '100%',
+              maxWidth: '320px',
+              textAlign: 'center',
+              boxShadow: '0 20px 50px rgba(0,0,0,0.2)',
+            }}
+          >
+            <div
+              style={{
+                background: '#FEE2E2',
+                color: '#DC2626',
+                width: '60px',
+                height: '60px',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 20px auto',
+                fontSize: '24px',
+              }}
+            >
+              🗑️
+            </div>
             <h3 style={{ margin: '0 0 10px 0', fontSize: '20px', fontWeight: 800 }}>¿Borrar pedido?</h3>
-            <p style={{ color: '#64748B', fontSize: '14px', marginBottom: '25px', lineHeight: '1.5' }}>Esta acción no se puede deshacer y el pedido desaparecerá.</p>
+            <p style={{ color: '#64748B', fontSize: '14px', marginBottom: '25px', lineHeight: '1.5' }}>
+              Esta acción no se puede deshacer y el pedido desaparecerá.
+            </p>
             <div style={{ display: 'flex', gap: '12px' }}>
-              <button onClick={() => setDeletingId(null)} style={{ flex: 1, padding: '12px', borderRadius: '15px', border: '1px solid #E2E8F0', background: 'white', fontWeight: 700, cursor: 'pointer' }}>NO</button>
-              <button onClick={handleDelete} style={{ flex: 1, padding: '12px', borderRadius: '15px', border: 'none', background: '#DC2626', color: 'white', fontWeight: 700, cursor: 'pointer' }}>SÍ, BORRAR</button>
+              <button
+                onClick={() => setDeletingId(null)}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  borderRadius: '15px',
+                  border: '1px solid #E2E8F0',
+                  background: 'white',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+              >
+                NO
+              </button>
+              <button
+                onClick={handleDelete}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  borderRadius: '15px',
+                  border: 'none',
+                  background: '#DC2626',
+                  color: 'white',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+              >
+                SÍ, BORRAR
+              </button>
             </div>
           </div>
         </div>
@@ -217,7 +355,23 @@ export default function BudgetManager() {
 
       {/* TOAST DE FEEDBACK */}
       {toast && (
-        <div style={{ position: 'fixed', bottom: '30px', left: '50%', transform: 'translateX(-50%)', background: '#111', color: 'white', padding: '12px 30px', borderRadius: '50px', fontSize: '14px', fontWeight: 600, boxShadow: '0 10px 30px rgba(0,0,0,0.2)', zIndex: 1100, animation: 'slideUp 0.3s ease' }}>
+        <div
+          style={{
+            position: 'fixed',
+            bottom: '90px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            background: '#111',
+            color: 'white',
+            padding: '12px 30px',
+            borderRadius: '50px',
+            fontSize: '14px',
+            fontWeight: 600,
+            boxShadow: '0 10px 30px rgba(0,0,0,0.2)',
+            zIndex: 1100,
+            animation: 'slideUp 0.3s ease',
+          }}
+        >
           {toast}
         </div>
       )}
@@ -225,7 +379,163 @@ export default function BudgetManager() {
       {printingOrder && <PrintModal order={printingOrder} onClose={() => setPrintingOrder(null)} />}
 
       <style>{`
-        @keyframes slideUp { from { transform: translate(-50%, 20px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
+        .budget-editor-wrapper {
+          height: 100%;
+          overflow: hidden;
+        }
+        .bm-desktop-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 10px;
+        }
+        .bm-desktop-divider {
+          border: none;
+          height: 2px;
+          background: #aba9a4;
+          opacity: 0.2;
+          margin: 24px 0;
+        }
+        .bm-filters-bar {
+          display: flex;
+          gap: 15px;
+          margin-bottom: 25px;
+          align-items: center;
+        }
+        .bm-search-input {
+          flex: 1;
+          padding: 14px 20px;
+          border-radius: 18px;
+          border: 2px solid #EDF2F7;
+          background: white;
+          font-size: 15px;
+          outline: none;
+          font-family: 'Inter', sans-serif;
+          box-sizing: border-box;
+        }
+        .bm-month-and-total {
+          display: flex;
+          gap: 15px;
+          align-items: center;
+        }
+        .bm-month-select-wrap {
+          position: relative;
+          display: flex;
+          align-items: center;
+        }
+        .bm-month-select {
+          appearance: none;
+          -webkit-appearance: none;
+          background: #F4F1E1;
+          color: #991B1B;
+          padding: 14px 45px 14px 25px;
+          border-radius: 22px;
+          border: none;
+          font-weight: 800;
+          font-size: 16px;
+          cursor: pointer;
+          outline: none;
+          font-family: 'Inter', sans-serif;
+          text-align: center;
+        }
+        .bm-month-arrow {
+          position: absolute;
+          right: 18px;
+          pointer-events: none;
+          color: #991B1B;
+          font-size: 10px;
+          opacity: 0.6;
+        }
+        .bm-total-pill {
+          background: #F4F1E1;
+          padding: 14px 25px;
+          border-radius: 18px;
+          color: #4b3b28;
+          font-weight: 800;
+          font-size: 16px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          white-space: nowrap;
+        }
+        .bm-mobile-actions {
+          display: none;
+        }
+        .bm-orders-list {
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+          padding-bottom: 30px;
+        }
+
+        @media (max-width: 768px) {
+          .budget-editor-wrapper {
+            height: auto;
+            overflow: visible;
+          }
+          .bm-desktop-header,
+          .bm-desktop-divider {
+            display: none;
+          }
+          .bm-filters-bar {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 12px;
+            margin-bottom: 18px;
+          }
+          .bm-search-input {
+            width: 100%;
+            background: #FAF9F5;
+            border: none;
+            border-radius: 16px;
+            padding: 15px 18px;
+            font-size: 15px;
+            font-style: italic;
+            color: #4b3b28;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
+          }
+          .bm-month-and-total {
+            display: flex;
+            gap: 10px;
+            width: 100%;
+          }
+          .bm-month-select {
+            background: #E2DEC9;
+            color: #992B2B;
+            padding: 13px 34px 13px 16px;
+            border-radius: 15px;
+            font-size: 13.5px;
+            font-weight: 800;
+            text-align: left;
+          }
+          .bm-month-arrow {
+            right: 12px;
+            color: #6E5D46;
+          }
+          .bm-total-pill {
+            flex: 1;
+            background: #E2DEC9;
+            color: #992B2B;
+            padding: 13px 14px;
+            border-radius: 15px;
+            font-size: 13px;
+            font-weight: 800;
+          }
+          .bm-mobile-actions {
+            display: flex;
+            gap: 10px;
+            width: 100%;
+          }
+          .bm-orders-list {
+            gap: 16px;
+            padding-bottom: 20px;
+          }
+        }
+
+        @keyframes slideUp {
+          from { transform: translate(-50%, 20px); opacity: 0; }
+          to { transform: translate(-50%, 0); opacity: 1; }
+        }
       `}</style>
     </div>
   );

@@ -130,13 +130,13 @@ const BudgetEditor = ({ editingOrder, onSave, onCancel }) => {
   const inputStyle = { width: '100%', padding: '12px 14px', borderRadius: '12px', border: '2px solid #F1F5F9', marginBottom: '10px', fontSize: '14px', fontFamily: 'Inter', background: 'white', boxSizing: 'border-box', outline: 'none' };
 
   return (
-    <div style={{ display: 'flex', gap: '20px', maxWidth: '1100px', margin: '0 auto', background: '#F4F1E1', padding: '20px', borderRadius: '30px', height: '90vh' }}>
+    <div className="be-container">
       
       {/* COLUMNA IZQUIERDA: CATÁLOGO */}
-      <div style={{ flex: 1, background: 'white', borderRadius: '22px', padding: '18px', display: 'flex', flexDirection: 'column', border: '1px solid #F1F5F9' }}>
+      <div className="be-col-catalogo">
         <h3 style={{ marginBottom: '10px', fontSize: '13px', fontWeight: 900, color: '#998E55', letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: 'Inter' }}>Catálogo</h3>
         <input type="text" placeholder="BUSCAR PRODUCTO..." value={busquedaProd} onChange={e => setBusquedaProd(e.target.value)} style={inputStyle} />
-        <div style={{ flex: 1, overflowY: 'auto', paddingRight: '5px' }}>
+        <div className="be-catalogo-scroll">
           {catalogo.filter(p => p.descripcion.toLowerCase().includes(busquedaProd.toLowerCase())).map(p => (
             <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px', borderBottom: '1px solid #f1f5f9' }}>
               <span style={{ fontSize: '12px', fontWeight: 700 }}>{p.descripcion.toUpperCase()}</span>
@@ -154,7 +154,7 @@ const BudgetEditor = ({ editingOrder, onSave, onCancel }) => {
       </div>
 
       {/* COLUMNA DERECHA: PEDIDO */}
-      <div style={{ flex: 1.2, background: 'white', borderRadius: '22px', padding: '20px', display: 'flex', flexDirection: 'column', border: '1px solid #F1F5F9' }}>
+      <div className="be-col-pedido">
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
           <input type="text" placeholder="CLIENTE" value={cliente} onChange={e => setCliente(e.target.value)} style={{ ...inputStyle, fontWeight: 'bold' }} />
           <input type="text" placeholder="FECHA" value={fecha} onChange={e => setFecha(e.target.value)} style={inputStyle} />
@@ -222,11 +222,11 @@ const BudgetEditor = ({ editingOrder, onSave, onCancel }) => {
         </div>
 
         {/* LISTADO CARRITO */}
-        <div style={{ flex: 1, overflowY: 'auto', border: '1px solid #f1f5f9', borderRadius: '12px', padding: '10px', marginBottom: '15px', background: '#f8fafc' }}>
+        <div style={{ flex: 1, minHeight: '90px', overflowY: 'auto', border: '1px solid #f1f5f9', borderRadius: '12px', padding: '10px', marginBottom: '15px', background: '#f8fafc' }}>
           {carrito.map((c, i) => (
-            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '13px', fontWeight: 700 }}>
-              <span style={{ color: c.total < 0 ? '#dc2626' : '#1e293b' }}>{c.cantidad}x {c.descripcion}</span>
-              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '13px', fontWeight: 700, gap: '8px' }}>
+              <span style={{ color: c.total < 0 ? '#dc2626' : '#1e293b', wordBreak: 'break-word' }}>{c.cantidad}x {c.descripcion}</span>
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexShrink: 0 }}>
                 <span style={{ color: c.total < 0 ? '#dc2626' : '#0f172a' }}>${c.total.toLocaleString()}</span>
                 <button onClick={() => quitarDelCarrito(i)} style={{ border: 'none', background: 'none', color: '#dc2626', fontWeight: 900, cursor: 'pointer' }}>×</button>
               </div>
@@ -235,11 +235,11 @@ const BudgetEditor = ({ editingOrder, onSave, onCancel }) => {
         </div>
 
         {/* DESCUENTOS */}
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '15px', background: '#F4F1E1', padding: '10px', borderRadius: '14px' }}>
-          <input type="text" placeholder="MOTIVO DESC." value={descLabel} onChange={e => setDescLabel(e.target.value)} style={{ flex: 1, padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '15px', background: '#F4F1E1', padding: '10px', borderRadius: '14px', flexWrap: 'wrap' }}>
+          <input type="text" placeholder="MOTIVO DESC." value={descLabel} onChange={e => setDescLabel(e.target.value)} style={{ flex: 1, minWidth: '110px', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
           <input type="number" placeholder="VALOR" value={descValor} onChange={e => setDescValor(e.target.value)} style={{ width: '70px', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
           <select value={descTipo} onChange={e => setDescTipo(e.target.value)} style={{ padding: '8px', borderRadius: '8px' }}><option value="$">$</option><option value="%">%</option></select>
-          <button onClick={aplicarDescuento} style={{ background: '#FF5E5E', color: 'white', border: 'none', borderRadius: '10px', padding: '0 14px', fontWeight: 800, fontFamily: 'Inter', cursor: 'pointer' }}>OK</button>
+          <button onClick={aplicarDescuento} style={{ background: '#FF5E5E', color: 'white', border: 'none', borderRadius: '10px', padding: '8px 14px', fontWeight: 800, fontFamily: 'Inter', cursor: 'pointer' }}>OK</button>
         </div>
 
         {/* ESTADOS */}
@@ -268,6 +268,57 @@ const BudgetEditor = ({ editingOrder, onSave, onCancel }) => {
           </button>
         </div>
       </div>
+
+      <style>{`
+        .be-container {
+          display: flex;
+          gap: 20px;
+          max-width: 1100px;
+          margin: 0 auto;
+          background: #F4F1E1;
+          padding: 20px;
+          border-radius: 30px;
+          height: 90vh;
+        }
+        .be-col-catalogo {
+          flex: 1;
+          background: white;
+          border-radius: 22px;
+          padding: 18px;
+          display: flex;
+          flex-direction: column;
+          border: 1px solid #F1F5F9;
+        }
+        .be-catalogo-scroll {
+          flex: 1;
+          overflow-y: auto;
+          padding-right: 5px;
+        }
+        .be-col-pedido {
+          flex: 1.2;
+          background: white;
+          border-radius: 22px;
+          padding: 20px;
+          display: flex;
+          flex-direction: column;
+          border: 1px solid #F1F5F9;
+        }
+        @media (max-width: 768px) {
+          .be-container {
+            flex-direction: column-reverse;
+            height: auto;
+            padding: 12px;
+            border-radius: 24px;
+            gap: 16px;
+          }
+          .be-col-catalogo {
+            max-height: 320px;
+          }
+          .be-catalogo-scroll {
+            max-height: 220px;
+          }
+        }
+      `}</style>
     </div>
   );
 };

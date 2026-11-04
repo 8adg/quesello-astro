@@ -12,21 +12,15 @@ interface Props {
 const { title, activeId } = Astro.props;
 ---
 
-<Layout title={title}>
+<Layout title={title} manifest="/admin-manifest.json">
 	<AdminAuth client:only="react">
 		<AdminNotifications client:load />
-		<div
-			style="display: flex; gap: 20px; padding: 20px; min-height: 100vh; width: 100%; box-sizing: border-box; background-color: #F0EEE4;"
-		>
-			<div
-				style="position: sticky; top: 20px; align-self: flex-start; z-index: 50;"
-			>
+		<div class="admin-shell">
+			<div class="admin-sidebar-container">
 				<AdminSidebar client:load activeId={activeId} />
 			</div>
 
-			<main
-				style="flex: 1; min-height: calc(100vh - 40px); background: radial-gradient(circle,rgba(247, 244, 215, 1) 0%, rgba(243, 242, 238, 1) 55%); border-radius: 40px; padding: 40px; box-shadow: 0 10px 40px rgba(0,0,0,0.02); display: flex; flex-direction: column; position: relative;"
-			>
+			<main class="admin-main">
 				<slot />
 			</main>
 		</div>
@@ -34,9 +28,65 @@ const { title, activeId } = Astro.props;
 </Layout>
 
 <style is:global>
-	/* Reset specific for admin area if needed */
+	/* Reset specific for admin area */
 	body {
-		background-color: #f0eee4 !important;
+		background-color: #EAE5D3 !important;
+		margin: 0;
+	}
+
+	.admin-shell {
+		display: flex;
+		gap: 20px;
+		padding: 20px;
+		min-height: 100vh;
+		width: 100%;
+		box-sizing: border-box;
+		background-color: #F0EEE4;
+	}
+
+	.admin-sidebar-container {
+		position: sticky;
+		top: 20px;
+		align-self: flex-start;
+		z-index: 50;
+	}
+
+	.admin-main {
+		flex: 1;
+		min-height: calc(100vh - 40px);
+		background: radial-gradient(circle, rgba(247, 244, 215, 1) 0%, rgba(243, 242, 238, 1) 55%);
+		border-radius: 40px;
+		padding: 40px;
+		box-shadow: 0 10px 40px rgba(0, 0, 0, 0.02);
+		display: flex;
+		flex-direction: column;
+		position: relative;
+		min-width: 0;
+	}
+
+	@media (max-width: 768px) {
+		.admin-shell {
+			flex-direction: column;
+			gap: 0;
+			padding: 0;
+			background-color: #EAE5D3;
+			padding-bottom: 92px;
+		}
+
+		.admin-sidebar-container {
+			position: sticky;
+			top: 0;
+			width: 100%;
+			z-index: 900;
+		}
+
+		.admin-main {
+			min-height: auto;
+			background: transparent;
+			border-radius: 0;
+			padding: 4px 16px 24px 16px;
+			box-shadow: none;
+		}
 	}
 
 	.select-wrapper {

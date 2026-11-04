@@ -51,12 +51,13 @@ export default function AdminAuth({ children }) {
   if (!session) {
     return (
       <div style={{ 
-        height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', 
-        background: '#F1F5F9', fontFamily: 'Inter' 
+        minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', 
+        background: '#EAE5D3', fontFamily: 'Inter', padding: '20px', boxSizing: 'border-box'
       }}>
         <div style={{ 
-          background: "white", padding: "40px", borderRadius: "30px", width: "100%", 
-          maxWidth: "400px", boxShadow: "0 20px 40px rgba(0,0,0,0.05)", textAlign: "center" 
+          background: "#FAF9F5", padding: "36px 28px", borderRadius: "30px", width: "100%", 
+          maxWidth: "400px", boxShadow: "0 20px 40px rgba(0,0,0,0.06)", textAlign: "center",
+          boxSizing: 'border-box'
         }}>
           <img src="/logo.svg" alt="Queselló" style={{ width: '150px', marginBottom: '30px' }} />
           <h2 style={{ fontSize: '22px', fontWeight: 800, marginBottom: '10px', color: '#1E293B' }}>Acceso Admin</h2>
