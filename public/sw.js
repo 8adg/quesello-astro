@@ -1,22 +1,21 @@
-const CACHE_NAME = 'quesello-pwa-v3';
+const CACHE_NAME = 'quesello-pwa-v4';
 
 self.addEventListener('install', (event) => {
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll([
-        '/',
         '/manifest.json',
         '/admin-manifest.json',
         '/iconos/92.png',
-        '/iconos/144.png',
         '/iconos/192.png',
-        '/iconos/512.png',
         '/logo.svg',
         '/iso-color.svg'
-      ]);
+      ]).catch((err) => {
+        console.warn('SW cache preload warning:', err);
+      });
     })
   );
-  self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
@@ -27,9 +26,8 @@ self.addEventListener('activate', (event) => {
           return caches.delete(key);
         }
       }));
-    })
+    }).then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
 // ==========================================
@@ -94,15 +92,14 @@ self.addEventListener('notificationclick', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Solo procesar solicitudes GET
   if (event.request.method !== 'GET') return;
 
-  // No cachear llamadas a APIs, admin en vivo o servicios externos
   const url = event.request.url;
   if (
     url.includes('localhost') ||
     url.includes('127.0.0.1') ||
     url.includes('/admin') ||
+    url.includes('sw.js') ||
     url.includes('supabase.co') || 
     url.includes('google-analytics.com') || 
     url.includes('googletagmanager.com') || 

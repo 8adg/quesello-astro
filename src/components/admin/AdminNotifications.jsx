@@ -57,6 +57,7 @@ const AdminNotifications = () => {
   }, []);
 
   const handleSubscribe = async () => {
+    setShowSettingsModal(true);
     setSubscribing(true);
     setStatusMsg(null);
     try {
@@ -64,12 +65,13 @@ const AdminNotifications = () => {
       await checkStatus();
       setStatusMsg({
         type: 'ok',
-        text: '¡Listo! Este dispositivo quedó vinculado para recibir notificaciones de nuevos pedidos web.',
+        text: '¡Listo! Este celular quedó vinculado. Tocá "Enviar notificación de prueba" abajo para verificarlo.',
       });
     } catch (err) {
+      await checkStatus();
       setStatusMsg({
         type: 'error',
-        text: err.message || 'No se pudo activar la notificación.',
+        text: err?.message || 'No se pudo activar la notificación.',
       });
     } finally {
       setSubscribing(false);
@@ -80,20 +82,20 @@ const AdminNotifications = () => {
     setTestingPush(true);
     setStatusMsg(null);
     try {
-      await notifyNewWebOrder({
+      const res = await notifyNewWebOrder({
         orderNumber: 'PRUEBA',
-        clientName: ' PRUEBA QUESELLÓ',
+        clientName: 'PRUEBA QUESELLÓ',
         total: 13500,
         summary: 'Notificación de prueba en celular',
       });
       setStatusMsg({
         type: 'ok',
-        text: 'Notificación de prueba enviada. Debería llegar a tu celular en unos segundos.',
+        text: `Notificación de prueba enviada (${res?.sent || 1} disp.). Debería sonar en tu celular ahora mismo.`,
       });
     } catch (err) {
       setStatusMsg({
         type: 'error',
-        text: 'Error al enviar prueba.',
+        text: 'Error al enviar prueba: ' + (err?.message || ''),
       });
     } finally {
       setTestingPush(false);
@@ -141,7 +143,8 @@ const AdminNotifications = () => {
       {/* BANNER FLOTANTE SI AÚN NO VINCULÓ EL DISPOSITIVO A WEB PUSH */}
       {!pushState.loading && !pushState.subscribed && !dismissedBanner && (
         <div className="admin-push-banner">
-          <div
+          <button
+            type="button"
             onClick={() => {
               if (pushState.iosNeedsInstall) {
                 setShowSettingsModal(true);
@@ -155,6 +158,14 @@ const AdminNotifications = () => {
               gap: '10px',
               flex: 1,
               cursor: 'pointer',
+              background: 'transparent',
+              border: 'none',
+              color: 'white',
+              fontFamily: 'Inter, sans-serif',
+              fontWeight: 800,
+              fontSize: '13px',
+              textAlign: 'left',
+              padding: 0,
             }}
           >
             <span style={{ fontSize: '18px' }}>🔔</span>
@@ -165,24 +176,28 @@ const AdminNotifications = () => {
                 ? 'INSTALAR APP PARA NOTIFICACIONES'
                 : 'ACTIVAR NOTIFICACIONES EN ESTE CELULAR'}
             </span>
-          </div>
+          </button>
           <button
             type="button"
-            onClick={() => setDismissedBanner(true)}
+            onClick={(e) => {
+              e.stopPropagation();
+              setDismissedBanner(true);
+            }}
             aria-label="Cerrar aviso"
             style={{
               background: 'rgba(255,255,255,0.2)',
               border: 'none',
               color: 'white',
-              width: '24px',
-              height: '24px',
+              width: '26px',
+              height: '26px',
               borderRadius: '50%',
               cursor: 'pointer',
               fontWeight: 800,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: '14px',
+              fontSize: '15px',
+              flexShrink: 0,
             }}
           >
             ×
@@ -299,6 +314,7 @@ const AdminNotifications = () => {
                   fontSize: '12.5px',
                   fontWeight: 600,
                   marginBottom: '14px',
+                  lineHeight: 1.4,
                 }}
               >
                 {statusMsg.text}
@@ -324,10 +340,10 @@ const AdminNotifications = () => {
                   }}
                 >
                   {subscribing
-                    ? 'Vinculando...'
+                    ? '⏳ Vinculando celular...'
                     : pushState.subscribed
                     ? '🔄 Re-sincronizar este dispositivo'
-                    : '🔔 Activar notificaciones en este celular'}
+                    : '🔔 Activar notificaciones ahora'}
                 </button>
               )}
 

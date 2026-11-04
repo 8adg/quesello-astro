@@ -22,12 +22,18 @@ export async function ensureServiceWorker() {
     return null;
   }
   try {
-    let reg = await navigator.serviceWorker.getRegistration('/');
-    if (!reg) {
-      reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+    let reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+    if (reg.installing || reg.waiting) {
+      await Promise.race([
+        navigator.serviceWorker.ready,
+        new Promise((resolve) => setTimeout(resolve, 4000)),
+      ]);
     }
-    await navigator.serviceWorker.ready;
-    return reg;
+    const readyReg = await Promise.race([
+      navigator.serviceWorker.ready,
+      new Promise((resolve) => setTimeout(() => resolve(reg), 4000)),
+    ]);
+    return readyReg || reg;
   } catch (err) {
     console.warn('Error registrando Service Worker:', err);
     return null;
@@ -67,7 +73,7 @@ export async function getAdminPushStatus() {
 
   try {
     const reg = await ensureServiceWorker();
-    if (!reg) return { supported: true, subscribed: false, permission };
+    if (!reg || !reg.pushManager) return { supported: true, subscribed: false, permission };
     const sub = await reg.pushManager.getSubscription();
     return {
       supported: true,
@@ -83,35 +89,55 @@ export async function getAdminPushStatus() {
 export async function subscribeAdminDevice() {
   if (isIosRequiresInstall()) {
     throw new Error(
-      'En iPhone/iPad primero tocá el botón Compartir de Safari y elegí "Agregar a pantalla de inicio". Luego abrí la App desde tu inicio para activar las notificaciones.'
+      'En iPhone/iPad primero tocá el botón Compartir de Safari y elegí "Agregar a pantalla de inicio". Luego abrí Queselló Admin desde tu pantalla de inicio.'
     );
   }
 
-  if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
-    throw new Error('Tu navegador no soporta notificaciones Web Push nativas.');
+  if (!window.isSecureContext) {
+    throw new Error('Las notificaciones Push requieren entrar con HTTPS (https://quesello.com.ar).');
   }
 
-  const perm = await Notification.requestPermission();
+  if (!('Notification' in window)) {
+    throw new Error('Tu navegador no permite notificaciones web. Si estás en iPhone, agregá la web a Pantalla de Inicio primero.');
+  }
+
+  // 1. Pedir permiso inmediatamente dentro del gesto de usuario
+  let perm = Notification.permission;
   if (perm !== 'granted') {
-    throw new Error('Debés permitir las notificaciones en el navegador para recibir alertas.');
+    perm = await Notification.requestPermission();
+  }
+  if (perm !== 'granted') {
+    throw new Error(
+      'Permiso de notificaciones bloqueado en el navegador. Tocá el candado/ajustes al lado de la URL en tu navegador y activá "Notificaciones: Permitir".'
+    );
   }
 
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    throw new Error('Tu navegador no soporta PushManager en segundo plano.');
+  }
+
+  // 2. Asegurar Service Worker activo
   const reg = await ensureServiceWorker();
-  if (!reg) {
-    throw new Error('No se pudo inicializar el Service Worker.');
+  if (!reg || !reg.pushManager) {
+    throw new Error('No se pudo inicializar el Service Worker. Recargá la página e intentá de nuevo.');
   }
 
+  // 3. Suscribir a Web Push con la llave VAPID (si había una suscripción vieja incompatible, la renovamos)
   let sub = await reg.pushManager.getSubscription();
-  if (!sub) {
-    sub = await reg.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
-    });
+  if (sub) {
+    try {
+      await sub.unsubscribe();
+    } catch (_) {}
   }
+
+  sub = await reg.pushManager.subscribe({
+    userVisibleOnly: true,
+    applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+  });
 
   const subJson = sub.toJSON();
 
-  // Guardar en Supabase -> tabla config (clave: admin_push_subscriptions)
+  // 4. Guardar en Supabase -> tabla config (clave: admin_push_subscriptions)
   const { data: existingRow } = await supabase
     .from('config')
     .select('valor')
@@ -143,6 +169,19 @@ export async function subscribeAdminDevice() {
 
   if (error) throw error;
 
+  // 5. Mostrar notificación local inmediata para confirmar que el celular suena/vibra
+  try {
+    if (reg.showNotification) {
+      await reg.showNotification('✅ ¡Celular vinculado a Queselló!', {
+        body: 'Ya vas a recibir notificaciones aquí cuando entre un pedido web.',
+        icon: '/iconos/192.png',
+        badge: '/iconos/92.png',
+        vibrate: [200, 100, 200],
+        tag: 'quesello-welcome-push',
+      });
+    }
+  } catch (_) {}
+
   return subJson;
 }
 
@@ -153,28 +192,25 @@ export async function notifyNewWebOrder({
   summary = '',
   phone = '',
 }) {
-  try {
-    const formattedTotal = Number(total || 0).toLocaleString('es-AR');
-    const lines = [
-      `Cliente: ${clientName}`,
-      `Total: $${formattedTotal}`,
-      summary ? `Detalle: ${summary}` : null,
-      phone ? `Tel: ${phone}` : null,
-    ].filter(Boolean);
+  const formattedTotal = Number(total || 0).toLocaleString('es-AR');
+  const lines = [
+    `Cliente: ${clientName}`,
+    `Total: $${formattedTotal}`,
+    summary ? `Detalle: ${summary}` : null,
+    phone ? `Tel: ${phone}` : null,
+  ].filter(Boolean);
 
-    await fetch(PUSH_FUNCTION_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        title: `📦 ¡Nuevo Pedido Web ${orderNumber ? '#' + orderNumber : ''}!`,
-        message: lines.join(' • '),
-        url: '/admin/presupuestos',
-        orderNumber,
-        tag: `quesello-order-${orderNumber || Date.now()}`,
-      }),
-    });
-  } catch (err) {
-    console.warn('No se pudo disparar la notificación push remota:', err);
-  }
+  const response = await fetch(PUSH_FUNCTION_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      title: `📦 ¡Nuevo Pedido Web ${orderNumber ? '#' + orderNumber : ''}!`,
+      message: lines.join(' • '),
+      url: '/admin/presupuestos',
+      orderNumber,
+      tag: `quesello-order-${orderNumber || Date.now()}`,
+    }),
+  });
+
+  return response.json().catch(() => ({}));
 }
-
