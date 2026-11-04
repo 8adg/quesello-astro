@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
+import AdminNotifications from "./AdminNotifications.jsx";
 
 export default function AdminAuth({ children }) {
   const [session, setSession] = useState(null);
@@ -103,5 +104,10 @@ export default function AdminAuth({ children }) {
   }
 
   // Si hay sesión, renderizar el contenido del admin
-  return <>{children}</>;
+  return (
+    <>
+      <AdminNotifications />
+      {children}
+    </>
+  );
 }

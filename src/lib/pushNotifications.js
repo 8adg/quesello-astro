@@ -17,18 +17,41 @@ function urlBase64ToUint8Array(base64String) {
   return outputArray;
 }
 
+async function logPushDebug(info) {
+  try {
+    await supabase.from('config').upsert({
+      clave: 'admin_push_debug',
+      valor: JSON.stringify({
+        ...info,
+        ua: typeof navigator !== 'undefined' ? navigator.userAgent : '',
+        url: typeof window !== 'undefined' ? window.location.href : '',
+        at: new Date().toISOString(),
+      }),
+    });
+  } catch (_) {}
+}
+
 export async function ensureServiceWorker() {
   if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
     return null;
   }
   try {
     let reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
-    if (reg.installing || reg.waiting) {
-      await Promise.race([
-        navigator.serviceWorker.ready,
-        new Promise((resolve) => setTimeout(resolve, 4000)),
-      ]);
+
+    const worker = reg.installing || reg.waiting || reg.active;
+    if (worker && worker.state !== 'activated') {
+      await new Promise((resolve) => {
+        const onState = () => {
+          if (worker.state === 'activated' || worker.state === 'redundant') {
+            worker.removeEventListener('statechange', onState);
+            resolve();
+          }
+        };
+        worker.addEventListener('statechange', onState);
+        setTimeout(resolve, 5000);
+      });
     }
+
     const readyReg = await Promise.race([
       navigator.serviceWorker.ready,
       new Promise((resolve) => setTimeout(() => resolve(reg), 4000)),
@@ -63,7 +86,11 @@ export async function getAdminPushStatus() {
     };
   }
   if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
-    return { supported: false, subscribed: false, permission: 'default' };
+    return {
+      supported: false,
+      subscribed: false,
+      permission: 'Notification' in window ? Notification.permission : 'unsupported',
+    };
   }
 
   const permission = Notification.permission;
@@ -86,103 +113,149 @@ export async function getAdminPushStatus() {
   }
 }
 
-export async function subscribeAdminDevice() {
-  if (isIosRequiresInstall()) {
-    throw new Error(
-      'En iPhone/iPad primero tocá el botón Compartir de Safari y elegí "Agregar a pantalla de inicio". Luego abrí Queselló Admin desde tu pantalla de inicio.'
-    );
-  }
+export async function subscribeAdminDevice(onStep) {
+  const report = (msg) => {
+    if (typeof onStep === 'function') onStep(msg);
+  };
 
-  if (!window.isSecureContext) {
-    throw new Error('Las notificaciones Push requieren entrar con HTTPS (https://quesello.com.ar).');
-  }
-
-  if (!('Notification' in window)) {
-    throw new Error('Tu navegador no permite notificaciones web. Si estás en iPhone, agregá la web a Pantalla de Inicio primero.');
-  }
-
-  // 1. Pedir permiso inmediatamente dentro del gesto de usuario
-  let perm = Notification.permission;
-  if (perm !== 'granted') {
-    perm = await Notification.requestPermission();
-  }
-  if (perm !== 'granted') {
-    throw new Error(
-      'Permiso de notificaciones bloqueado en el navegador. Tocá el candado/ajustes al lado de la URL en tu navegador y activá "Notificaciones: Permitir".'
-    );
-  }
-
-  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-    throw new Error('Tu navegador no soporta PushManager en segundo plano.');
-  }
-
-  // 2. Asegurar Service Worker activo
-  const reg = await ensureServiceWorker();
-  if (!reg || !reg.pushManager) {
-    throw new Error('No se pudo inicializar el Service Worker. Recargá la página e intentá de nuevo.');
-  }
-
-  // 3. Suscribir a Web Push con la llave VAPID (si había una suscripción vieja incompatible, la renovamos)
-  let sub = await reg.pushManager.getSubscription();
-  if (sub) {
-    try {
-      await sub.unsubscribe();
-    } catch (_) {}
-  }
-
-  sub = await reg.pushManager.subscribe({
-    userVisibleOnly: true,
-    applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
-  });
-
-  const subJson = sub.toJSON();
-
-  // 4. Guardar en Supabase -> tabla config (clave: admin_push_subscriptions)
-  const { data: existingRow } = await supabase
-    .from('config')
-    .select('valor')
-    .eq('clave', 'admin_push_subscriptions')
-    .maybeSingle();
-
-  let list = [];
-  if (existingRow?.valor) {
-    try {
-      list = JSON.parse(existingRow.valor);
-      if (!Array.isArray(list)) list = [];
-    } catch (_) {
-      list = [];
-    }
-  }
-
-  const filtered = list.filter((item) => item?.endpoint && item.endpoint !== subJson.endpoint);
-  filtered.push({
-    endpoint: subJson.endpoint,
-    keys: subJson.keys,
-    userAgent: navigator.userAgent.slice(0, 120),
-    updatedAt: new Date().toISOString(),
-  });
-
-  const { error } = await supabase.from('config').upsert({
-    clave: 'admin_push_subscriptions',
-    valor: JSON.stringify(filtered),
-  });
-
-  if (error) throw error;
-
-  // 5. Mostrar notificación local inmediata para confirmar que el celular suena/vibra
   try {
-    if (reg.showNotification) {
-      await reg.showNotification('✅ ¡Celular vinculado a Queselló!', {
-        body: 'Ya vas a recibir notificaciones aquí cuando entre un pedido web.',
-        icon: '/iconos/192.png',
-        badge: '/iconos/92.png',
-        vibrate: [200, 100, 200],
-        tag: 'quesello-welcome-push',
-      });
-    }
-  } catch (_) {}
+    report('Verificando compatibilidad del navegador...');
 
-  return subJson;
+    if (isIosRequiresInstall()) {
+      throw new Error(
+        'En iPhone/iPad primero tocá el botón Compartir de Safari y elegí "Agregar a pantalla de inicio". Luego abrí Queselló Admin desde tu pantalla de inicio.'
+      );
+    }
+
+    if (!window.isSecureContext) {
+      throw new Error('Las notificaciones Push requieren entrar con HTTPS (https://quesello.com.ar).');
+    }
+
+    if (!('Notification' in window)) {
+      throw new Error(
+        'Tu navegador no permite notificaciones web. Si estás en iPhone, agregá la web a Pantalla de Inicio primero.'
+      );
+    }
+
+    // 1. Pedir permiso inmediatamente dentro del gesto de usuario
+    let perm = Notification.permission;
+    if (perm !== 'granted') {
+      report('Solicitando permiso de notificaciones...');
+      perm = await Notification.requestPermission();
+    }
+
+    if (perm === 'denied') {
+      throw new Error(
+        'El permiso de notificaciones está BLOQUEADO en tu navegador Chrome/Safari. Tocá el ícono de ajustes/candado a la izquierda de quesello.com.ar arriba en la barra de dirección → Permisos → Notificaciones → Permitir.'
+      );
+    }
+
+    if (perm !== 'granted') {
+      throw new Error(
+        'No se aceptó el cartel de permiso del navegador (estado: ' + perm + '). Volvé a tocar el botón y elegí "Permitir".'
+      );
+    }
+
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      throw new Error('Tu navegador no soporta PushManager en segundo plano.');
+    }
+
+    // 2. Asegurar Service Worker activo
+    report('Activando Service Worker...');
+    const reg = await ensureServiceWorker();
+    if (!reg || !reg.pushManager) {
+      throw new Error('No se pudo inicializar el Service Worker. Recargá la página e intentá de nuevo.');
+    }
+
+    // 3. Suscribir a Web Push con la llave VAPID
+    report('Conectando con el servicio Push del celular...');
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) {
+      try {
+        sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+        });
+      } catch (subErr) {
+        // Si falló por clave previa distinta, desuscribir y reintentar
+        const oldSub = await reg.pushManager.getSubscription();
+        if (oldSub) {
+          await oldSub.unsubscribe().catch(() => {});
+        }
+        sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+        });
+      }
+    }
+
+    const subJson = sub.toJSON();
+
+    // 4. Guardar en Supabase -> tabla config (clave: admin_push_subscriptions)
+    report('Guardando vinculación en la base de datos...');
+    const { data: existingRow } = await supabase
+      .from('config')
+      .select('valor')
+      .eq('clave', 'admin_push_subscriptions')
+      .maybeSingle();
+
+    let list = [];
+    if (existingRow?.valor) {
+      try {
+        list = JSON.parse(existingRow.valor);
+        if (!Array.isArray(list)) list = [];
+      } catch (_) {
+        list = [];
+      }
+    }
+
+    const filtered = list.filter((item) => item?.endpoint && item.endpoint !== subJson.endpoint);
+    filtered.push({
+      endpoint: subJson.endpoint,
+      keys: subJson.keys,
+      userAgent: navigator.userAgent.slice(0, 120),
+      updatedAt: new Date().toISOString(),
+    });
+
+    const { error } = await supabase.from('config').upsert({
+      clave: 'admin_push_subscriptions',
+      valor: JSON.stringify(filtered),
+    });
+
+    if (error) throw error;
+
+    await logPushDebug({
+      status: 'SUCCESS',
+      endpoint: subJson.endpoint?.slice(0, 60),
+      permission: Notification.permission,
+    });
+
+    // 5. Mostrar notificación local inmediata para confirmar que el celular suena/vibra
+    try {
+      if (reg.showNotification) {
+        await reg.showNotification('✅ ¡Celular vinculado a Queselló!', {
+          body: 'Ya vas a recibir notificaciones aquí cuando entre un pedido web.',
+          icon: '/iconos/192.png',
+          badge: '/iconos/92.png',
+          vibrate: [200, 100, 200],
+          tag: 'quesello-welcome-push',
+        });
+      }
+    } catch (_) {}
+
+    return subJson;
+  } catch (err) {
+    await logPushDebug({
+      status: 'ERROR',
+      errorName: err?.name || 'Error',
+      errorMessage: err?.message || String(err),
+      permission: typeof Notification !== 'undefined' ? Notification.permission : 'no-notification-api',
+      isSecure: typeof window !== 'undefined' ? window.isSecureContext : false,
+      hasSW: typeof navigator !== 'undefined' && 'serviceWorker' in navigator,
+      hasPush: typeof window !== 'undefined' && 'PushManager' in window,
+    });
+    throw err;
+  }
 }
 
 export async function notifyNewWebOrder({

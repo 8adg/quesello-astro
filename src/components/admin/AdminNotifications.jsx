@@ -16,8 +16,10 @@ const AdminNotifications = () => {
     permission: 'default',
   });
   const [subscribing, setSubscribing] = useState(false);
+  const [stepText, setStepText] = useState('');
   const [testingPush, setTestingPush] = useState(false);
   const [statusMsg, setStatusMsg] = useState(null);
+  const [attemptCount, setAttemptCount] = useState(0);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [toast, setToast] = useState(null);
   const [dismissedBanner, setDismissedBanner] = useState(false);
@@ -59,13 +61,14 @@ const AdminNotifications = () => {
   const handleSubscribe = async () => {
     setShowSettingsModal(true);
     setSubscribing(true);
-    setStatusMsg(null);
+    setStepText('Iniciando vinculación...');
+    setAttemptCount((c) => c + 1);
     try {
-      await subscribeAdminDevice();
+      await subscribeAdminDevice((step) => setStepText(step));
       await checkStatus();
       setStatusMsg({
         type: 'ok',
-        text: '¡Listo! Este celular quedó vinculado. Tocá "Enviar notificación de prueba" abajo para verificarlo.',
+        text: '✅ ¡Listo! Este celular quedó vinculado. Tocá "Enviar notificación de prueba" abajo para probarlo.',
       });
     } catch (err) {
       await checkStatus();
@@ -75,6 +78,7 @@ const AdminNotifications = () => {
       });
     } finally {
       setSubscribing(false);
+      setStepText('');
     }
   };
 
@@ -90,7 +94,7 @@ const AdminNotifications = () => {
       });
       setStatusMsg({
         type: 'ok',
-        text: `Notificación de prueba enviada (${res?.sent || 1} disp.). Debería sonar en tu celular ahora mismo.`,
+        text: `📲 Notificación de prueba enviada (${res?.sent || 1} disp.). Debería sonar en tu celular ahora mismo.`,
       });
     } catch (err) {
       setStatusMsg({
@@ -139,18 +143,15 @@ const AdminNotifications = () => {
   };
 
   return (
-    <>
+    <div>
       {/* BANNER FLOTANTE SI AÚN NO VINCULÓ EL DISPOSITIVO A WEB PUSH */}
       {!pushState.loading && !pushState.subscribed && !dismissedBanner && (
         <div className="admin-push-banner">
           <button
             type="button"
             onClick={() => {
-              if (pushState.iosNeedsInstall) {
-                setShowSettingsModal(true);
-              } else {
-                handleSubscribe();
-              }
+              setStatusMsg(null);
+              setShowSettingsModal(true);
             }}
             style={{
               display: 'flex',
@@ -170,9 +171,7 @@ const AdminNotifications = () => {
           >
             <span style={{ fontSize: '18px' }}>🔔</span>
             <span>
-              {subscribing
-                ? 'VINCULANDO CELULAR...'
-                : pushState.iosNeedsInstall
+              {pushState.iosNeedsInstall
                 ? 'INSTALAR APP PARA NOTIFICACIONES'
                 : 'ACTIVAR NOTIFICACIONES EN ESTE CELULAR'}
             </span>
@@ -298,25 +297,47 @@ const AdminNotifications = () => {
                 <span>
                   {pushState.subscribed
                     ? 'Este dispositivo ya recibe notificaciones Push'
-                    : 'Notificaciones Push desactivadas en este equipo'}
+                    : `Estado actual: Desactivado (Permiso navegador: ${pushState.permission || 'default'})`}
                 </span>
+              </div>
+            )}
+
+            {subscribing && stepText && (
+              <div
+                style={{
+                  background: '#EFF6FF',
+                  color: '#1D4ED8',
+                  border: '1px solid #93C5FD',
+                  padding: '12px 14px',
+                  borderRadius: '12px',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  marginBottom: '14px',
+                }}
+              >
+                ⏳ {stepText}
               </div>
             )}
 
             {statusMsg && (
               <div
                 style={{
-                  background: statusMsg.type === 'ok' ? '#ECFDF5' : '#FEF2F2',
-                  color: statusMsg.type === 'ok' ? '#065F46' : '#DC2626',
-                  border: `1px solid ${statusMsg.type === 'ok' ? '#A7F3D0' : '#FECACA'}`,
-                  padding: '10px 14px',
-                  borderRadius: '12px',
-                  fontSize: '12.5px',
+                  background: statusMsg.type === 'ok' ? '#ECFDF5' : '#1E293B',
+                  color: statusMsg.type === 'ok' ? '#065F46' : '#F8FAFC',
+                  border: `2px solid ${statusMsg.type === 'ok' ? '#10B981' : '#FF5E5E'}`,
+                  padding: '12px 14px',
+                  borderRadius: '14px',
+                  fontSize: '13px',
                   fontWeight: 600,
                   marginBottom: '14px',
-                  lineHeight: 1.4,
+                  lineHeight: 1.45,
                 }}
               >
+                {attemptCount > 1 && statusMsg.type === 'error' && (
+                  <div style={{ fontSize: '11px', color: '#FCA5A5', fontWeight: 800, marginBottom: '4px' }}>
+                    INTENTO #{attemptCount}:
+                  </div>
+                )}
                 {statusMsg.text}
               </div>
             )}
@@ -461,7 +482,7 @@ const AdminNotifications = () => {
           to { transform: translate(-50%, 0); opacity: 1; }
         }
       `}</style>
-    </>
+    </div>
   );
 };
 
