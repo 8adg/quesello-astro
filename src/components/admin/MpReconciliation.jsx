@@ -1,13 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 
+const WEBHOOK_SECRET = "M@timan1976/*";
+const WEBHOOK_URL = `https://yihizwspxnxlfowvitoe.supabase.co/functions/v1/mp-webhook?secret=${encodeURIComponent(WEBHOOK_SECRET)}`;
+
 export default function MpReconciliation({ onBack }) {
   const [payments, setPayments] = useState([]);
   const [budgets, setBudgets] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
   const [activeTab, setActiveTab] = useState('unlinked'); // 'unlinked' | 'history'
   const [searchTerm, setSearchTerm] = useState("");
   
+  // Diagnóstico y configuración de Token de MP
+  const [syncError, setSyncError] = useState(null);
+  const [showTokenConfig, setShowTokenConfig] = useState(false);
+  const [mpTokenInput, setMpTokenInput] = useState("");
+  const [savingToken, setSavingToken] = useState(false);
+
   // Para búsquedas manuales en cada tarjeta de pago
   const [manualSearchQuery, setManualSearchQuery] = useState({});
   const [showManualSearch, setShowManualSearch] = useState({});
@@ -19,31 +29,85 @@ export default function MpReconciliation({ onBack }) {
     loadData();
   }, [activeTab]);
 
+  // Intentar sincronizar automáticamente al abrir por primera vez
+  useEffect(() => {
+    handleSync(true);
+  }, []);
+
   const showToast = (msg) => {
     setToast(msg);
-    setTimeout(() => setToast(null), 3000);
+    setTimeout(() => setToast(null), 3500);
   };
 
-  const handleSync = async () => {
-    setLoading(true);
+  const handleSync = async (silent = false) => {
+    setSyncing(true);
+    if (!silent) setLoading(true);
     try {
-      const secret = "M@timan1976/*";
-      const response = await fetch(`https://yihizwspxnxlfowvitoe.supabase.co/functions/v1/mp-webhook?secret=${encodeURIComponent(secret)}`);
+      const response = await fetch(WEBHOOK_URL);
+      const text = await response.text();
+      let res = null;
+      try { res = JSON.parse(text); } catch (_) {}
+
       if (!response.ok) {
-        throw new Error(await response.text());
+        setSyncError(
+          res || {
+            error: text || "Error al conectar con Mercado Pago",
+            mpStatus: response.status
+          }
+        );
+        if (!silent) {
+          showToast(res?.mpMessage ? `MP Error (${res.mpStatus}): ${res.mpMessage}` : "Error al sincronizar con Mercado Pago");
+        }
+        return;
       }
-      const res = await response.json();
-      if (res.success) {
-        showToast(`Sincronización completada.`);
-      } else {
-        showToast("Error en la sincronización.");
+
+      setSyncError(null);
+      if (res?.success) {
+        if (!silent || res.count > 0) {
+          showToast(
+            res.autoLinkedCount > 0
+              ? `Sincronizados ${res.count} pagos (${res.autoLinkedCount} conciliados automáticamente).`
+              : `Sincronización completada (${res.count} pagos verificados).`
+          );
+        }
       }
     } catch (err) {
       console.error(err);
-      showToast("Error al sincronizar con Mercado Pago");
+      setSyncError({ error: err.message });
+      if (!silent) showToast("Error de red al sincronizar con Mercado Pago");
     } finally {
+      setSyncing(false);
       loadData();
     }
+  };
+
+  const handleSaveTokenAndSync = async (e) => {
+    e.preventDefault();
+    const cleaned = mpTokenInput.trim().replace(/^["']|["']$/g, "");
+    if (!cleaned) {
+      showToast("Ingresá un Access Token válido (APP_USR-...)");
+      return;
+    }
+    setSavingToken(true);
+    try {
+      const { error } = await supabase
+        .from('config')
+        .upsert({ clave: 'mp_access_token', valor: cleaned });
+      if (error) throw error;
+      showToast("Token guardado. Probando conexión con Mercado Pago...");
+      setShowTokenConfig(false);
+      await handleSync(false);
+    } catch (err) {
+      console.error(err);
+      showToast("Error al guardar el token: " + err.message);
+    } finally {
+      setSavingToken(false);
+    }
+  };
+
+  const copyWebhookUrl = () => {
+    navigator.clipboard.writeText(WEBHOOK_URL);
+    showToast("URL de Webhook copiada al portapapeles");
   };
 
   const loadData = async () => {
@@ -67,6 +131,16 @@ export default function MpReconciliation({ onBack }) {
         .order('id', { ascending: false });
       if (budErr) throw budErr;
       setBudgets(budData || []);
+
+      // 3. Cargar token actual si existe en config
+      const { data: tokenRow } = await supabase
+        .from('config')
+        .select('valor')
+        .eq('clave', 'mp_access_token')
+        .maybeSingle();
+      if (tokenRow?.valor && !mpTokenInput) {
+        setMpTokenInput(tokenRow.valor);
+      }
 
     } catch (e) {
       console.error(e);
@@ -226,89 +300,215 @@ export default function MpReconciliation({ onBack }) {
     <div style={{ display: 'flex', flexDirection: 'column', fontFamily: 'Inter', position: 'relative' }}>
       
       {/* CABECERA */}
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+      <header className="mp-reconcil-header">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <button 
             onClick={onBack} 
             style={{ 
               border: 'none', 
-              background: 'none', 
               cursor: 'pointer', 
               padding: '8px', 
               display: 'flex', 
               alignItems: 'center', 
               justifyContent: 'center',
               borderRadius: '50%',
-              backgroundColor: 'rgba(74, 85, 104, 0.05)'
+              backgroundColor: 'rgba(74, 85, 104, 0.08)',
+              flexShrink: 0
             }}
           >
             <img src="https://api.iconify.design/lucide/arrow-left.svg?color=%23FF5E5E" style={{ width: '22px', height: '22px' }} alt="Volver" />
           </button>
-          <h1 style={{ fontSize: '28px', color: '#FF5E5E', fontWeight: 800, margin: 0 }}>Conciliación Mercado Pago</h1>
+          <h1 className="mp-reconcil-title">Conciliación Mercado Pago</h1>
         </div>
 
-        {/* TABS */}
-        <div style={{ display: 'flex', background: '#F4F1E1', padding: '6px', borderRadius: '18px' }}>
-          <button 
-            onClick={() => setActiveTab('unlinked')} 
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={() => setShowTokenConfig(v => !v)}
             style={{
-              border: 'none',
-              padding: '8px 20px',
+              border: '1px solid #E2E8F0',
+              background: showTokenConfig ? '#1E293B' : 'white',
+              color: showTokenConfig ? 'white' : '#475569',
+              padding: '8px 14px',
               borderRadius: '14px',
-              fontWeight: 800,
-              fontSize: '13px',
+              fontSize: '12px',
+              fontWeight: 700,
               cursor: 'pointer',
-              background: activeTab === 'unlinked' ? '#FF5E5E' : 'transparent',
-              color: activeTab === 'unlinked' ? 'white' : '#8B1E1E',
-              transition: 'all 0.2s'
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
             }}
           >
-            PENDIENTES
+            ⚙️ Credenciales MP
           </button>
-          <button 
-            onClick={() => setActiveTab('history')} 
-            style={{
-              border: 'none',
-              padding: '8px 20px',
-              borderRadius: '14px',
-              fontWeight: 800,
-              fontSize: '13px',
-              cursor: 'pointer',
-              background: activeTab === 'history' ? '#FF5E5E' : 'transparent',
-              color: activeTab === 'history' ? 'white' : '#8B1E1E',
-              transition: 'all 0.2s'
-            }}
-          >
-            CONCILIADOS
-          </button>
+
+          {/* TABS */}
+          <div style={{ display: 'flex', background: '#F4F1E1', padding: '5px', borderRadius: '16px' }}>
+            <button 
+              onClick={() => setActiveTab('unlinked')} 
+              style={{
+                border: 'none',
+                padding: '7px 14px',
+                borderRadius: '12px',
+                fontWeight: 800,
+                fontSize: '12px',
+                cursor: 'pointer',
+                background: activeTab === 'unlinked' ? '#FF5E5E' : 'transparent',
+                color: activeTab === 'unlinked' ? 'white' : '#8B1E1E',
+                transition: 'all 0.2s'
+              }}
+            >
+              PENDIENTES
+            </button>
+            <button 
+              onClick={() => setActiveTab('history')} 
+              style={{
+                border: 'none',
+                padding: '7px 14px',
+                borderRadius: '12px',
+                fontWeight: 800,
+                fontSize: '12px',
+                cursor: 'pointer',
+                background: activeTab === 'history' ? '#FF5E5E' : 'transparent',
+                color: activeTab === 'history' ? 'white' : '#8B1E1E',
+                transition: 'all 0.2s'
+              }}
+            >
+              CONCILIADOS
+            </button>
+          </div>
         </div>
       </header>
 
-      <hr style={{ border: 'none', height: '2px', background: '#aba9a4', opacity: 0.2, margin: '20px 0' }} />
+      <hr style={{ border: 'none', height: '2px', background: '#aba9a4', opacity: 0.2, margin: '16px 0' }} />
+
+      {/* ALERTA DE DIAGNÓSTICO SI FALLA LA CONEXIÓN CON MERCADO PAGO */}
+      {(syncError || showTokenConfig) && (
+        <div style={{
+          background: syncError ? '#FFF5F5' : '#F8FAFC',
+          border: syncError ? '2px solid #FEB2B2' : '2px solid #E2E8F0',
+          borderRadius: '20px',
+          padding: '18px 20px',
+          marginBottom: '20px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '12px'
+        }}>
+          {syncError && (
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#9B1C1C', fontWeight: 800, fontSize: '14px' }}>
+                <span>⚠️ Mercado Pago rechazó la conexión ({syncError.mpStatus || 'Error'})</span>
+              </div>
+              <p style={{ margin: '6px 0 0', fontSize: '13px', color: '#7F1D1D', lineHeight: 1.5 }}>
+                <strong>Respuesta de Mercado Pago:</strong> <code>{syncError.mpMessage || syncError.error}</code>
+                {syncError.tokenPrefix && <span> (Token en uso: <code>{syncError.tokenPrefix}</code>)</span>}
+              </p>
+              {String(syncError.mpMessage || '').includes('Unauthorized use of live credentials') && (
+                <div style={{ marginTop: '8px', background: 'white', padding: '10px 14px', borderRadius: '12px', fontSize: '12px', color: '#475569', lineHeight: 1.5, border: '1px solid #FECACA' }}>
+                  <strong>¿Por qué ocurre este error en Mercado Pago?</strong><br />
+                  El mensaje <code>Unauthorized use of live credentials</code> aparece cuando el Access Token configurado pertenece a la pestaña <strong>"Credenciales de prueba"</strong> (que también empiezan con <code>APP_USR-...</code>) o cuando la aplicación en Mercado Pago Developers todavía no tiene activadas las <strong>"Credenciales de producción"</strong>.<br />
+                  👉 Entrá a <a href="https://www.mercadopago.com.ar/developers/panel/app" target="_blank" rel="noreferrer" style={{ color: '#8B1E1E', fontWeight: 800 }}>Mercado Pago Developers → Tus integraciones</a>, seleccioná tu app, andá a <strong>Producción → Credenciales de producción</strong>, copiá el <strong>Access Token</strong> y pegalo acá abajo:
+                </div>
+              )}
+            </div>
+          )}
+
+          <form onSubmit={handleSaveTokenAndSync} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <label style={{ fontSize: '11px', fontWeight: 800, color: '#475569', textTransform: 'uppercase' }}>
+              Access Token de Producción de Mercado Pago (APP_USR-...)
+            </label>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <input
+                type="text"
+                placeholder="Pegá acá tu Access Token de Producción (APP_USR-...)"
+                value={mpTokenInput}
+                onChange={(e) => setMpTokenInput(e.target.value)}
+                style={{
+                  flex: 1,
+                  minWidth: '220px',
+                  padding: '11px 14px',
+                  borderRadius: '12px',
+                  border: '1px solid #CBD5E1',
+                  fontSize: '13px',
+                  fontFamily: 'monospace',
+                  background: 'white'
+                }}
+              />
+              <button
+                type="submit"
+                disabled={savingToken}
+                style={{
+                  background: '#1E293B',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '12px',
+                  padding: '11px 18px',
+                  fontSize: '13px',
+                  fontWeight: 800,
+                  cursor: 'pointer'
+                }}
+              >
+                {savingToken ? 'Guardando...' : 'Guardar Token y Sincronizar'}
+              </button>
+            </div>
+          </form>
+
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', paddingTop: '6px', borderTop: '1px dashed #CBD5E1', fontSize: '11px', color: '#64748B' }}>
+            <span>URL para configurar en <strong>Webhooks</strong> de Mercado Pago (evento: <em>Pagos / payment</em>):</span>
+            <button
+              type="button"
+              onClick={copyWebhookUrl}
+              style={{
+                background: 'white',
+                border: '1px solid #CBD5E1',
+                borderRadius: '8px',
+                padding: '4px 10px',
+                fontSize: '11px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                color: '#1E293B'
+              }}
+            >
+              📋 Copiar URL Webhook
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* FILTRO DE BÚSQUEDA */}
-      <div style={{ display: 'flex', gap: '15px', marginBottom: '25px', alignItems: 'center' }}>
+      <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', alignItems: 'center' }}>
         <input 
           type="text" 
           placeholder="Buscar por pagador, concepto o monto..." 
           value={searchTerm} 
           onChange={(e) => setSearchTerm(e.target.value)} 
-          style={{ flex: 1, padding: '14px 20px', borderRadius: '18px', border: '2px solid #EDF2F7', background: 'white', fontSize: '15px', outline: 'none' }} 
+          style={{ flex: 1, padding: '13px 16px', borderRadius: '16px', border: '2px solid #EDF2F7', background: 'white', fontSize: '14px', outline: 'none' }} 
         />
         <button 
-          onClick={handleSync} 
+          onClick={() => handleSync(false)}
+          disabled={syncing}
           style={{ 
             background: '#F4F1E1', 
             border: 'none', 
-            borderRadius: '18px', 
-            padding: '14px 20px', 
+            borderRadius: '16px', 
+            padding: '13px 16px', 
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center'
+            justifyContent: 'center',
+            gap: '6px',
+            fontWeight: 800,
+            fontSize: '13px',
+            color: '#4b3b28',
+            flexShrink: 0
           }}
         >
-          <img src="https://api.iconify.design/lucide/refresh-cw.svg?color=%234b3b28" style={{ width: '18px', height: '18px' }} alt="Sincronizar" />
+          <img
+            src="https://api.iconify.design/lucide/refresh-cw.svg?color=%234b3b28"
+            style={{ width: '18px', height: '18px', animation: syncing ? 'spin 1s linear infinite' : 'none' }}
+            alt="Sincronizar"
+          />
+          <span className="mp-sync-btn-label">{syncing ? 'Sincronizando...' : 'Sincronizar MP'}</span>
         </button>
       </div>
 
@@ -316,11 +516,11 @@ export default function MpReconciliation({ onBack }) {
       {loading ? (
         <div style={{ textAlign: 'center', padding: '50px', fontSize: '16px', color: '#64748B', fontWeight: 600 }}>Cargando transferencias...</div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', paddingBottom: '50px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', paddingBottom: '50px' }}>
           
           {payments.length === 0 && (
             <div style={{ 
-              background: 'white', borderRadius: '24px', padding: '40px', textAlign: 'center', 
+              background: 'white', borderRadius: '24px', padding: '40px 20px', textAlign: 'center', 
               boxShadow: '0 4px 20px rgba(0,0,0,0.01)', border: '1px solid #F1F5F9', color: '#64748B', fontWeight: 500
             }}>
               {activeTab === 'unlinked' ? 'No hay transferencias pendientes de conciliación.' : 'No hay transferencias conciliadas en el historial.'}
@@ -338,7 +538,6 @@ export default function MpReconciliation({ onBack }) {
             .map(pago => {
               // Obtener sugerencias automáticas
               const suggestions = activeTab === 'unlinked' ? getSuggestions(pago) : [];
-              const hasPerfectSuggestion = suggestions.length > 0 && suggestions[0].score >= 80;
               
               // Buscar presupuesto asociado (si es pestaña de historial)
               const associatedBudget = activeTab === 'history' ? budgets.find(b => b.id === pago.presupuesto_id) : null;
@@ -347,17 +546,17 @@ export default function MpReconciliation({ onBack }) {
                 <div 
                   key={pago.id}
                   style={{
-                    background: 'white', borderRadius: '24px', padding: '24px 30px', 
-                    boxShadow: '0 4px 20px rgba(0,0,0,0.01)', border: '1px solid #F1F5F9',
+                    background: 'white', borderRadius: '22px', padding: '20px', 
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.02)', border: '1px solid #F1F5F9',
                     display: 'flex', flexDirection: 'column', gap: '15px',
                     opacity: actionLoading ? 0.6 : 1, pointerEvents: actionLoading ? 'none' : 'auto'
                   }}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '15px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
                     {/* Info Transferencia */}
-                    <div style={{ flex: 1, minWidth: '250px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <span style={{ fontSize: '18px', fontWeight: 800, color: '#4b3b28' }}>{pago.payer_name || "Desconocido"}</span>
+                    <div style={{ flex: 1, minWidth: '200px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: '17px', fontWeight: 800, color: '#4b3b28' }}>{pago.payer_name || "Desconocido"}</span>
                         {pago.payer_document && (
                           <span style={{ background: '#F1F5F9', padding: '3px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: 700, color: '#64748B' }}>
                             {pago.payer_document}
@@ -379,7 +578,7 @@ export default function MpReconciliation({ onBack }) {
 
                     {/* Monto Pago */}
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center' }}>
-                      <div style={{ fontSize: '24px', fontWeight: 800, color: '#8E1F52' }}>
+                      <div style={{ fontSize: '22px', fontWeight: 800, color: '#8E1F52' }}>
                         ${Number(pago.monto).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                       </div>
                       <div style={{ fontSize: '10px', fontWeight: 900, color: '#00B67A', marginTop: '4px', textTransform: 'uppercase' }}>
@@ -403,13 +602,13 @@ export default function MpReconciliation({ onBack }) {
                             <div 
                               key={b.id}
                               style={{ 
-                                display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
+                                display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px',
                                 background: score >= 75 ? '#F0FDF4' : '#F8FAFC', 
-                                padding: '12px 20px', borderRadius: '16px', border: score >= 75 ? '1px solid #BBF7D0' : '1px solid #E2E8F0'
+                                padding: '12px 16px', borderRadius: '16px', border: score >= 75 ? '1px solid #BBF7D0' : '1px solid #E2E8F0'
                               }}
                             >
                               <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                                   <span style={{ fontWeight: 800, fontSize: '14px', color: '#1e293b' }}>
                                     {b.numero} - {b.cliente}
                                   </span>
@@ -524,8 +723,8 @@ export default function MpReconciliation({ onBack }) {
                   {activeTab === 'history' && (
                     <div style={{ borderTop: '1px dashed #E2E8F0', paddingTop: '15px', marginTop: '5px' }}>
                       <div style={{ 
-                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                        background: '#F0FDF4', padding: '12px 20px', borderRadius: '16px', border: '1px solid #BBF7D0'
+                        display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px',
+                        background: '#F0FDF4', padding: '12px 16px', borderRadius: '16px', border: '1px solid #BBF7D0'
                       }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -568,13 +767,36 @@ export default function MpReconciliation({ onBack }) {
 
       {/* TOAST DE FEEDBACK */}
       {toast && (
-        <div style={{ position: 'fixed', bottom: '30px', left: '50%', transform: 'translateX(-50%)', background: '#111', color: 'white', padding: '12px 30px', borderRadius: '50px', fontSize: '14px', fontWeight: 600, boxShadow: '0 10px 30px rgba(0,0,0,0.2)', zIndex: 1100, animation: 'slideUp 0.3s ease' }}>
+        <div style={{ position: 'fixed', bottom: '30px', left: '50%', transform: 'translateX(-50%)', background: '#111', color: 'white', padding: '12px 24px', borderRadius: '50px', fontSize: '13px', fontWeight: 600, boxShadow: '0 10px 30px rgba(0,0,0,0.2)', zIndex: 1100, animation: 'slideUp 0.3s ease', whiteSpace: 'nowrap' }}>
           {toast}
         </div>
       )}
 
       <style>{`
         @keyframes slideUp { from { transform: translate(-50%, 20px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .mp-reconcil-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 12px;
+          margin-bottom: 4px;
+        }
+        .mp-reconcil-title {
+          font-size: 26px;
+          color: #FF5E5E;
+          font-weight: 800;
+          margin: 0;
+        }
+        @media (max-width: 768px) {
+          .mp-reconcil-title {
+            font-size: 19px;
+          }
+          .mp-sync-btn-label {
+            display: none;
+          }
+        }
       `}</style>
 
     </div>
