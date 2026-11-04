@@ -137,23 +137,21 @@ export async function subscribeAdminDevice(onStep) {
       );
     }
 
-    // 1. Pedir permiso inmediatamente dentro del gesto de usuario
+    // 1. Intentar pedir permiso dentro del gesto de usuario (sin bloquear si Notification.permission quedó cacheado en 'denied')
     let perm = Notification.permission;
     if (perm !== 'granted') {
       report('Solicitando permiso de notificaciones...');
-      perm = await Notification.requestPermission();
+      try {
+        perm = await Notification.requestPermission();
+      } catch (_) {}
     }
 
-    if (perm === 'denied') {
-      throw new Error(
-        'El permiso de notificaciones está BLOQUEADO en tu navegador Chrome/Safari. Tocá el ícono de ajustes/candado a la izquierda de quesello.com.ar arriba en la barra de dirección → Permisos → Notificaciones → Permitir.'
-      );
-    }
-
-    if (perm !== 'granted') {
-      throw new Error(
-        'No se aceptó el cartel de permiso del navegador (estado: ' + perm + '). Volvé a tocar el botón y elegí "Permitir".'
-      );
+    let permApiState = perm;
+    if (navigator.permissions && navigator.permissions.query) {
+      try {
+        const pStatus = await navigator.permissions.query({ name: 'notifications' });
+        permApiState = pStatus.state;
+      } catch (_) {}
     }
 
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
@@ -177,15 +175,21 @@ export async function subscribeAdminDevice(onStep) {
           applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
         });
       } catch (subErr) {
-        // Si falló por clave previa distinta, desuscribir y reintentar
         const oldSub = await reg.pushManager.getSubscription();
         if (oldSub) {
           await oldSub.unsubscribe().catch(() => {});
+          sub = await reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+          });
+        } else {
+          if (perm === 'denied' || permApiState === 'denied' || subErr?.name === 'NotAllowedError') {
+            throw new Error(
+              'Android está bloqueando las notificaciones de Chrome a nivel sistema. En tu celular andá a: Ajustes de Android → Aplicaciones → Chrome → Notificaciones → activá "Permitir notificaciones" (y abajo del todo en "Sitios", verificá que quesello.com.ar esté activado). Luego recargá esta página.'
+            );
+          }
+          throw subErr;
         }
-        sub = await reg.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
-        });
       }
     }
 
