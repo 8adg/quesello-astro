@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../../lib/supabase';
+import { supabaseAdmin as supabase } from '../../lib/supabase';
 
 const WEBHOOK_SECRET = "M@timan1976/*";
 const WEBHOOK_URL = `https://yihizwspxnxlfowvitoe.supabase.co/functions/v1/mp-webhook?secret=${encodeURIComponent(WEBHOOK_SECRET)}`;
 
 export default function MpReconciliation({ onBack }) {
-  const [payments, setPayments] = useState([]);
+  const [allPayments, setAllPayments] = useState([]);
   const [budgets, setBudgets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
@@ -27,10 +27,6 @@ export default function MpReconciliation({ onBack }) {
 
   useEffect(() => {
     loadData();
-  }, [activeTab]);
-
-  // Intentar sincronizar automáticamente al abrir por primera vez
-  useEffect(() => {
     handleSync(true);
   }, []);
 
@@ -113,21 +109,15 @@ export default function MpReconciliation({ onBack }) {
   const loadData = async () => {
     setLoading(true);
     try {
-      // 1. Obtener pagos de Mercado Pago según la pestaña activa
-      let payQuery = supabase.from('pagos_recibidos_mp').select('*');
-      if (activeTab === 'unlinked') {
-        payQuery = payQuery.is('presupuesto_id', null);
-      } else {
-        payQuery = payQuery.not('presupuesto_id', 'is', null);
-      }
-      const { data: payData, error: payErr } = await payQuery.order('fecha_acreditacion', { ascending: false });
+      // 1. Obtener todos los pagos recibidos usando supabaseAdmin (evita bloqueo RLS de sesión autenticada)
+      const { data: payData, error: payErr } = await supabase
+        .from('pagos_recibidos_mp')
+        .select('*')
+        .order('fecha_acreditacion', { ascending: false });
       if (payErr) throw payErr;
-      const filteredPayments = (payData || []).filter(p =>
-        activeTab === 'unlinked' ? !String(p.concepto || '').startsWith('[DESCARTADO]') : true
-      );
-      setPayments(filteredPayments);
+      setAllPayments(payData || []);
 
-      // 2. Obtener presupuestos impagos para el algoritmo de sugerencias (o todos si es la pestaña de historial)
+      // 2. Obtener presupuestos para sugerencias e historial
       const { data: budData, error: budErr } = await supabase
         .from('presupuestos')
         .select('id, numero, cliente, total, fecha, pagado, estado')
@@ -319,6 +309,12 @@ export default function MpReconciliation({ onBack }) {
     }).replace(',', '');
   };
 
+  const unlinkedPayments = allPayments.filter(
+    p => p.presupuesto_id == null && !String(p.concepto || '').startsWith('[DESCARTADO]')
+  );
+  const historyPayments = allPayments.filter(p => p.presupuesto_id != null);
+  const payments = activeTab === 'unlinked' ? unlinkedPayments : historyPayments;
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', fontFamily: 'Inter', position: 'relative' }}>
       
@@ -381,7 +377,7 @@ export default function MpReconciliation({ onBack }) {
                 transition: 'all 0.2s'
               }}
             >
-              PENDIENTES
+              PENDIENTES ({unlinkedPayments.length})
             </button>
             <button 
               onClick={() => setActiveTab('history')} 
@@ -397,7 +393,7 @@ export default function MpReconciliation({ onBack }) {
                 transition: 'all 0.2s'
               }}
             >
-              CONCILIADOS
+              CONCILIADOS ({historyPayments.length})
             </button>
           </div>
         </div>
