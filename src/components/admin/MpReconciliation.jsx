@@ -122,7 +122,10 @@ export default function MpReconciliation({ onBack }) {
       }
       const { data: payData, error: payErr } = await payQuery.order('fecha_acreditacion', { ascending: false });
       if (payErr) throw payErr;
-      setPayments(payData || []);
+      const filteredPayments = (payData || []).filter(p =>
+        activeTab === 'unlinked' ? !String(p.concepto || '').startsWith('[DESCARTADO]') : true
+      );
+      setPayments(filteredPayments);
 
       // 2. Obtener presupuestos impagos para el algoritmo de sugerencias (o todos si es la pestaña de historial)
       const { data: budData, error: budErr } = await supabase
@@ -249,6 +252,26 @@ export default function MpReconciliation({ onBack }) {
     } catch (e) {
       console.error(e);
       showToast("Error al vincular pago");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Acción: Descartar un movimiento que no corresponde a ningún pedido
+  const handleDiscard = async (pago) => {
+    setActionLoading(true);
+    try {
+      const newConcept = `[DESCARTADO] ${pago.concepto || ''}`.trim();
+      const { error } = await supabase
+        .from('pagos_recibidos_mp')
+        .update({ concepto: newConcept })
+        .eq('id', pago.id);
+      if (error) throw error;
+      showToast("Transferencia descartada de pendientes");
+      loadData();
+    } catch (e) {
+      console.error(e);
+      showToast("Error al descartar transferencia");
     } finally {
       setActionLoading(false);
     }
@@ -644,19 +667,31 @@ export default function MpReconciliation({ onBack }) {
                         </div>
                       )}
 
-                      {/* Búsqueda Manual */}
+                      {/* Búsqueda Manual y Descarte */}
                       <div style={{ marginTop: '10px' }}>
                         {!showManualSearch[pago.id] ? (
-                          <button 
-                            onClick={() => setShowManualSearch(prev => ({ ...prev, [pago.id]: true }))}
-                            style={{ 
-                              background: 'none', border: 'none', color: '#FF5E5E', fontSize: '12px', 
-                              fontWeight: 800, cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: '5px' 
-                            }}
-                          >
-                            <img src="https://api.iconify.design/lucide/link.svg?color=%23FF5E5E" style={{ width: '14px', height: '14px' }} alt="" />
-                            Vincular manualmente un presupuesto
-                          </button>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                            <button 
+                              onClick={() => setShowManualSearch(prev => ({ ...prev, [pago.id]: true }))}
+                              style={{ 
+                                background: 'none', border: 'none', color: '#FF5E5E', fontSize: '12px', 
+                                fontWeight: 800, cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: '5px' 
+                              }}
+                            >
+                              <img src="https://api.iconify.design/lucide/link.svg?color=%23FF5E5E" style={{ width: '14px', height: '14px' }} alt="" />
+                              Vincular manualmente un presupuesto
+                            </button>
+
+                            <button
+                              onClick={() => handleDiscard(pago)}
+                              style={{
+                                background: 'none', border: 'none', color: '#94A3B8', fontSize: '11px',
+                                fontWeight: 700, cursor: 'pointer', padding: 0
+                              }}
+                            >
+                              ✕ Descartar (no es pedido)
+                            </button>
+                          </div>
                         ) : (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', background: '#F8FAFC', padding: '15px', borderRadius: '16px', border: '1px solid #E2E8F0' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -671,40 +706,40 @@ export default function MpReconciliation({ onBack }) {
 
                             <input 
                               type="text" 
-                              placeholder="Buscar por nro. presupuesto (ej: 00194-01) o cliente..."
+                              placeholder="Buscar por nro., cliente o monto (ej: 00238, Rocio, 15950)..."
                               value={manualSearchQuery[pago.id] || ""}
                               onChange={(e) => setManualSearchQuery(prev => ({ ...prev, [pago.id]: e.target.value }))}
                               style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
                             />
 
                             {/* Resultados de búsqueda manual */}
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '150px', overflowY: 'auto' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '180px', overflowY: 'auto' }}>
                               {budgets
-                                .filter(b => !b.pagado)
                                 .filter(b => {
                                   const query = (manualSearchQuery[pago.id] || "").toLowerCase();
                                   if (!query) return false;
                                   return (b.cliente || "").toLowerCase().includes(query) || 
-                                         (b.numero || "").toLowerCase().includes(query);
+                                         (b.numero || "").toLowerCase().includes(query) ||
+                                         String(b.total || "").includes(query);
                                 })
-                                .slice(0, 5)
+                                .slice(0, 6)
                                 .map(b => (
                                   <div 
                                     key={b.id}
                                     style={{ 
-                                      display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
+                                      display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px',
                                       padding: '8px 12px', background: 'white', borderRadius: '10px', border: '1px solid #E2E8F0'
                                     }}
                                   >
                                     <span style={{ fontSize: '12px', fontWeight: 700, color: '#334155' }}>
-                                      {b.numero} - {b.cliente} (${b.total})
+                                      {b.numero} - {b.cliente} (${Number(b.total).toLocaleString('es-AR')}) {b.pagado ? '· [PAGADO]' : '· [IMPAGO]'}
                                     </span>
                                     <button 
                                       onClick={() => handleLink(pago.id, b.id, b.numero)}
                                       style={{ 
                                         background: '#495D56', color: 'white', border: 'none', 
                                         padding: '4px 10px', borderRadius: '8px', fontSize: '11px', fontWeight: 700, 
-                                        cursor: 'pointer' 
+                                        cursor: 'pointer', flexShrink: 0
                                       }}
                                     >
                                       Vincular

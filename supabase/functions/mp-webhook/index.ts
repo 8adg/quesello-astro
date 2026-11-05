@@ -8,94 +8,153 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
 }
 
-function extractPaymentFields(paymentDetails: any) {
+function parseBudgetDate(fechaStr: string): Date | null {
+  if (!fechaStr) return null;
+  const parts = fechaStr.split('/');
+  if (parts.length === 3) {
+    const d = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]), 12, 0, 0);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  const d = new Date(fechaStr);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+function extractPaymentFields(paymentDetails: any, ownerCollectorId: string) {
   const paymentId = paymentDetails.id;
   const monto = paymentDetails.transaction_amount;
   const status = paymentDetails.status;
   const fechaAcreditacion = paymentDetails.date_approved || paymentDetails.date_created || new Date().toISOString();
 
-  // Extraer nombre del pagador desde todas las ubicaciones posibles de MP (Checkout + Transferencias CVU/Coelsa)
-  let payerName = "Transferencia Recibida";
-  const bankPayer = paymentDetails.point_of_interaction?.transaction_data?.bank_info?.payer;
+  // En transferencias CVU (account_fund), MP pone los datos del propio titular receptor en paymentDetails.payer
+  const isSelfPayerInMp =
+    ownerCollectorId &&
+    String(paymentDetails.payer?.id || "") === String(ownerCollectorId);
 
-  if (paymentDetails.payer?.first_name || paymentDetails.payer?.last_name) {
+  const bankPayer = paymentDetails.point_of_interaction?.transaction_data?.bank_info?.payer;
+  const e2eId = paymentDetails.point_of_interaction?.transaction_data?.e2e_id || null;
+
+  let payerName = "TRANSFERENCIA CVU / BANCARIA";
+  let payerDocument: string | null = null;
+
+  if (!isSelfPayerInMp && (paymentDetails.payer?.first_name || paymentDetails.payer?.last_name)) {
     const parts = [paymentDetails.payer.first_name, paymentDetails.payer.last_name].filter(Boolean);
     payerName = parts.join(" ").toUpperCase();
   } else if (bankPayer?.long_name || bankPayer?.account_holder_name) {
     payerName = (bankPayer.long_name || bankPayer.account_holder_name).toUpperCase();
-  } else if (paymentDetails.additional_info?.payer?.first_name || paymentDetails.additional_info?.payer?.last_name) {
+  } else if (!isSelfPayerInMp && (paymentDetails.additional_info?.payer?.first_name || paymentDetails.additional_info?.payer?.last_name)) {
     const parts = [paymentDetails.additional_info.payer.first_name, paymentDetails.additional_info.payer.last_name].filter(Boolean);
     payerName = parts.join(" ").toUpperCase();
-  } else if (paymentDetails.payer?.email) {
+  } else if (!isSelfPayerInMp && paymentDetails.payer?.email) {
     payerName = paymentDetails.payer.email;
+  } else if (paymentDetails.payment_method_id === "cvu") {
+    payerName = "TRANSFERENCIA CVU RECIBIDA";
+  } else if (paymentDetails.payment_method_id === "account_money") {
+    payerName = "TRANSFERENCIA MERCADO PAGO";
   }
 
-  if (payerName === "Transferencia Recibida" && paymentDetails.transaction_details?.financial_institution) {
-    payerName = `TRANSF: ${paymentDetails.transaction_details.financial_institution}`.toUpperCase();
+  if (!isSelfPayerInMp && paymentDetails.payer?.identification?.number) {
+    payerDocument = `${paymentDetails.payer.identification.type || 'DOC'}: ${paymentDetails.payer.identification.number}`;
+  } else if (bankPayer?.identification?.number || bankPayer?.id) {
+    payerDocument = String(bankPayer.identification?.number || bankPayer.id);
+  } else if (e2eId) {
+    payerDocument = `COELSA: ${e2eId}`;
   }
 
-  const payerDocument =
-    paymentDetails.payer?.identification?.number ||
-    bankPayer?.identification?.number ||
-    bankPayer?.id ||
-    null;
+  const rawDesc = paymentDetails.description && paymentDetails.description !== "Bank Transfer"
+    ? paymentDetails.description
+    : null;
 
   const rawConceptParts = [
     paymentDetails.external_reference,
-    paymentDetails.description,
+     paymentDetails.point_of_interaction?.forward_data?.concept,
+    rawDesc,
     paymentDetails.statement_descriptor,
     paymentDetails.point_of_interaction?.transaction_data?.bank_info?.origin_wallet_id
   ].filter(Boolean);
-  const concepto = rawConceptParts.join(" | ").toUpperCase();
+
+  const concepto = rawConceptParts.length > 0
+    ? rawConceptParts.join(" | ").toUpperCase()
+    : (paymentDetails.payment_method_id === "cvu" ? "INGRESO POR TRANSFERENCIA CVU" : "TRANSFERENCIA MP");
 
   return { paymentId, monto, status, fechaAcreditacion, payerName, payerDocument, concepto };
 }
 
-async function processAndSavePayment(supabase: any, paymentDetails: any) {
-  const { paymentId, monto, status, fechaAcreditacion, payerName, payerDocument, concepto } =
-    extractPaymentFields(paymentDetails);
-
-  // Solo guardar pagos aprobados o acreditados
-  if (status && status !== "approved" && status !== "authorized") {
-    return { saved: false, autoLinked: false, budgetNumero: null };
+async function processAndSavePayment(
+  supabase: any,
+  paymentDetails: any,
+  ownerCollectorId: string,
+  allBudgets: any[],
+  linkedBudgetIds: Set<number>
+) {
+  // Ignorar compras salientes (donde collector_id no es nuestra cuenta) o ingresos propios por Debin
+  if (ownerCollectorId && String(paymentDetails.collector_id || "") !== String(ownerCollectorId)) {
+    return { saved: false, skipped: true };
+  }
+  if (paymentDetails.payment_method_id === "debin_transfer") {
+    return { saved: false, skipped: true };
   }
 
-  // Verificar si este pago ya estaba vinculado a un presupuesto para no pisar vinculaciones manuales
+  const { paymentId, monto, status, fechaAcreditacion, payerName, payerDocument, concepto } =
+    extractPaymentFields(paymentDetails, ownerCollectorId);
+
+  if (status !== "approved") {
+    return { saved: false, skipped: true };
+  }
+
+  // Verificar si este pago ya estaba vinculado a un presupuesto o descartado manualmente
   const { data: existingPayment } = await supabase
     .from("pagos_recibidos_mp")
-    .select("presupuesto_id")
+    .select("presupuesto_id, concepto")
     .eq("mp_payment_id", String(paymentId))
     .maybeSingle();
+
+  if (existingPayment?.concepto?.startsWith("[DESCARTADO]")) {
+    return { saved: false, skipped: true };
+  }
 
   let presupuestoId = existingPayment?.presupuesto_id || null;
   let autoLinked = false;
   let budgetNumero = null;
 
-  if (!presupuestoId && status === "approved") {
-    // 1. Buscar por número en concepto o external_reference (00194-01 o W00175)
+  if (!presupuestoId) {
+    // 1. Buscar por número explícito en concepto o external_reference (00194-01 o W00175)
     const matchStandard = concepto.match(/(\d{5}-\d{2})/);
     const matchWeb = concepto.match(/(W\d{5})/i);
     const numeroIdentificado = matchStandard ? matchStandard[1] : (matchWeb ? matchWeb[1].toUpperCase() : null);
 
     if (numeroIdentificado) {
-      const { data: budget } = await supabase
-        .from("presupuestos")
-        .select("id, numero, total, pagado")
-        .eq("numero", numeroIdentificado)
-        .eq("pagado", false)
-        .maybeSingle();
-
-      if (budget) {
-        const diff = Math.abs(Number(budget.total) - Number(monto));
-        if (diff < 1.00) {
-          presupuestoId = budget.id;
-          budgetNumero = budget.numero;
+      const budget = allBudgets.find(b => String(b.numero).toUpperCase() === numeroIdentificado);
+      if (budget && Math.abs(Number(budget.total) - Number(monto)) < 1.00) {
+        presupuestoId = budget.id;
+        budgetNumero = budget.numero;
+        linkedBudgetIds.add(budget.id);
+        if (!budget.pagado) {
           autoLinked = true;
+          budget.pagado = true;
           await supabase
             .from("presupuestos")
             .update({ pagado: true, estado: "EN PROCESO" })
             .eq("id", budget.id);
         }
+      }
+    }
+
+    // 2. Si no tenía número en concepto, verificar si coincide con un presupuesto que YA había sido marcado como PAGADO manualmente en fechas cercanas
+    if (!presupuestoId) {
+      const payDate = new Date(fechaAcreditacion);
+      const historicalMatch = allBudgets.find(b => {
+        if (!b.pagado || linkedBudgetIds.has(b.id)) return false;
+        if (Math.abs(Number(b.total) - Number(monto)) >= 1.00) return false;
+        const bDate = parseBudgetDate(b.fecha);
+        if (!bDate || isNaN(payDate.getTime())) return false;
+        const diffDays = Math.abs(payDate.getTime() - bDate.getTime()) / (1000 * 60 * 60 * 24);
+        return diffDays <= 8;
+      });
+
+      if (historicalMatch) {
+        presupuestoId = historicalMatch.id;
+        budgetNumero = historicalMatch.numero;
+        linkedBudgetIds.add(historicalMatch.id);
       }
     }
   }
@@ -123,19 +182,16 @@ async function processAndSavePayment(supabase: any, paymentDetails: any) {
 }
 
 serve(async (req) => {
-  // Manejo de peticiones preflight CORS
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    // 1. Validar Token Secreto
     const urlObj = new URL(req.url);
     const secret = urlObj.searchParams.get("secret");
     const systemSecret = Deno.env.get("WEBHOOK_SECRET");
 
     if (!systemSecret || secret !== systemSecret) {
-      console.warn("Intento de acceso no autorizado.");
       return new Response("No autorizado", { status: 401, headers: corsHeaders });
     }
 
@@ -143,7 +199,6 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Permitir leer mp_access_token desde tabla config (editable desde Admin) con fallback a env var
     const { data: configTokenRow } = await supabase
       .from("config")
       .select("valor")
@@ -156,7 +211,6 @@ serve(async (req) => {
     const mpAccessToken = rawToken.trim().replace(/^["']|["']$/g, "");
 
     if (!mpAccessToken) {
-      console.error("Falta configurar MP_ACCESS_TOKEN.");
       return new Response(
         JSON.stringify({
           error: "Falta configurar el Access Token de Mercado Pago.",
@@ -166,13 +220,28 @@ serve(async (req) => {
       );
     }
 
+    // Extraer el user_id (collector_id) del sufijo del Access Token (APP_USR-...-79275219)
+    const tokenParts = mpAccessToken.split("-");
+    const lastPart = tokenParts[tokenParts.length - 1];
+    const ownerCollectorId = /^\d+$/.test(lastPart) ? lastPart : "";
+
+    // Obtener presupuestos y vínculos existentes para emparejar con precisión
+    const [{ data: budgetsData }, { data: existingLinksData }] = await Promise.all([
+      supabase.from("presupuestos").select("id, numero, cliente, total, fecha, pagado, estado").order("id", { ascending: false }),
+      supabase.from("pagos_recibidos_mp").select("presupuesto_id").not("presupuesto_id", "is", null)
+    ]);
+
+    const allBudgets = budgetsData || [];
+    const linkedBudgetIds = new Set<number>(
+      (existingLinksData || []).map((r: any) => Number(r.presupuesto_id)).filter(Boolean)
+    );
+
     // ==========================================
     // MODO GET: SINCRONIZACIÓN MANUAL
     // ==========================================
     if (req.method === "GET") {
-      console.log("Iniciando sincronización manual de pagos...");
-
-      const mpSearchUrl = `https://api.mercadopago.com/v1/payments/search?sort=date_created&criteria=desc&limit=30`;
+      const collectorParam = ownerCollectorId ? `&collector.id=${ownerCollectorId}` : "";
+      const mpSearchUrl = `https://api.mercadopago.com/v1/payments/search?sort=date_created&criteria=desc&limit=40${collectorParam}`;
       const mpResponse = await fetch(mpSearchUrl, {
         headers: { "Authorization": `Bearer ${mpAccessToken}` }
       });
@@ -182,7 +251,6 @@ serve(async (req) => {
         let parsedErr: any = null;
         try { parsedErr = JSON.parse(errBody); } catch (_) {}
 
-        console.error("Error al consultar API de búsqueda de MP:", mpResponse.status, errBody);
         return new Response(
           JSON.stringify({
             error: "Error al conectar con Mercado Pago",
@@ -198,13 +266,18 @@ serve(async (req) => {
 
       const searchResults = await mpResponse.json();
       const paymentsList = searchResults.results || [];
-      console.log(`Se recuperaron ${paymentsList.length} transacciones de Mercado Pago.`);
 
       let syncCount = 0;
       let autoLinkedCount = 0;
 
       for (const paymentDetails of paymentsList) {
-        const res = await processAndSavePayment(supabase, paymentDetails);
+        const res = await processAndSavePayment(
+          supabase,
+          paymentDetails,
+          ownerCollectorId,
+          allBudgets,
+          linkedBudgetIds
+        );
         if (res.saved) syncCount++;
         if (res.autoLinked) autoLinkedCount++;
       }
@@ -229,9 +302,7 @@ serve(async (req) => {
     // ==========================================
     if (req.method === "POST") {
       const body = await req.json().catch(() => ({}));
-      console.log("Notificación Webhook recibida:", JSON.stringify(body));
 
-      // Soportar tanto formato Webhook v1 (body.type === 'payment', body.data.id) como IPN query params (topic=payment&id=...)
       const topic = body.type || body.topic || urlObj.searchParams.get("type") || urlObj.searchParams.get("topic");
       const paymentId =
         body.data?.id ||
@@ -248,19 +319,22 @@ serve(async (req) => {
       });
 
       if (!mpResponse.ok) {
-        console.error(`Error al consultar pago ${paymentId}:`, await mpResponse.text());
         return new Response("Error al consultar MP", { status: 502, headers: corsHeaders });
       }
 
       const paymentDetails = await mpResponse.json();
-      const result = await processAndSavePayment(supabase, paymentDetails);
+      const result = await processAndSavePayment(
+        supabase,
+        paymentDetails,
+        ownerCollectorId,
+        allBudgets,
+        linkedBudgetIds
+      );
 
       if (result.error) {
-        console.error("Error en webhook upsert:", result.error);
         return new Response("Error de base de datos", { status: 500, headers: corsHeaders });
       }
 
-      // Enviar notificación Push al celular del Admin cuando entra un pago
       if (result.saved) {
         try {
           const pushTitle = result.autoLinked
