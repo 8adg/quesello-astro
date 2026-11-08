@@ -39,7 +39,9 @@
 <style>
   .header-main-wrapper {
     width: 100%;
-    padding: 16px 20px 20px 20px;
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 20px 4px 10px 4px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -53,13 +55,13 @@
   }
 
   .logo-img {
-    height: 50px; /* Altura desktop */
+    height: 44px; /* Altura desktop */
     width: auto;
   }
 
   @media (max-width: 768px) {
     .header-main-wrapper {
-      padding: 24px 36px 10px 15px;
+      padding: 24px 6px 10px 0px;
     }
     .logo-img {
       height: 32px; /* Altura mobile respetando tu fix */
