@@ -420,8 +420,13 @@
 
         async function fetchPin() {
             try {
-                const { data } = await supabaseClient.from('ajustes').select('valor').eq('id', 'pin_validacion').single();
-                if (data) correctPin = data.valor;
+                const { data: cfg } = await supabaseClient.from('config').select('valor').eq('clave', 'pin_validacion').maybeSingle();
+                if (cfg && cfg.valor) {
+                    correctPin = cfg.valor;
+                    return;
+                }
+                const { data } = await supabaseClient.from('ajustes').select('valor').eq('id', 'pin_validacion').maybeSingle();
+                if (data && data.valor) correctPin = data.valor;
             } catch (e) { console.error("Error fetching PIN", e); }
         }
 
@@ -443,8 +448,20 @@
 
         function formatLabel(val) {
             if (!val) return "Sin fecha";
-            const d = new Date(val);
-            if (isNaN(d.getTime())) return val;
+            const str = String(val).trim();
+            // Si viene en formato argentino D/M/YYYY o DD/MM/YYYY sin hora (ej: "5/11/2026")
+            const dmyMatch = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:\s+(\d{1,2}):(\d{2}))?$/);
+            if (dmyMatch) {
+                const dd = dmyMatch[1].padStart(2, '0');
+                const mm = dmyMatch[2].padStart(2, '0');
+                const yyyy = dmyMatch[3];
+                if (dmyMatch[4] && dmyMatch[5]) {
+                    return `${dd}-${mm}-${yyyy} ${dmyMatch[4].padStart(2, '0')}:${dmyMatch[5]}`;
+                }
+                return `${dd}-${mm}-${yyyy}`;
+            }
+            const d = new Date(str);
+            if (isNaN(d.getTime())) return str;
             return `${d.getDate().toString().padStart(2, '0')}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getFullYear()} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
         }
 
@@ -487,7 +504,7 @@
             }
 
             if (data.estado === 'ENTREGADO') {
-                mostrarEntregado(data.entregado_at);
+                mostrarEntregado(data.entregado_at || data.retiro_sugerido || data.fecha);
             }
         }
 
@@ -496,18 +513,25 @@
             const textMap = {
                 'EN PROCESO': 'ESTAMOS PREPARANDO TU PEDIDO',
                 'PENDIENTE DE ENTREGA': '¡LISTO PARA RETIRAR!',
+                'EN PUNTO DE ENTREGA': '¡LISTO PARA RETIRAR EN EL LOCAL!',
                 'ENTREGADO': 'EL PAQUETE FUE ENTREGADO'
             };
 
             pill.innerText = textMap[estado] || estado;
 
             pill.className = 'status-pill';
-            if (estado === 'EN PROCESO') pill.style.background = '#DBEAFE';
-            if (estado === 'EN PROCESO') pill.style.color = '#1E40AF';
-            if (estado === 'PENDIENTE DE ENTREGA') pill.style.background = '#FEF3C7';
-            if (estado === 'PENDIENTE DE ENTREGA') pill.style.color = '#92400E';
-            if (estado === 'ENTREGADO') pill.style.background = '#D1FAE5';
-            if (estado === 'ENTREGADO') pill.style.color = '#065F46';
+            if (estado === 'EN PROCESO') {
+                pill.style.background = '#DBEAFE';
+                pill.style.color = '#1E40AF';
+            }
+            if (estado === 'PENDIENTE DE ENTREGA' || estado === 'EN PUNTO DE ENTREGA') {
+                pill.style.background = '#FEF3C7';
+                pill.style.color = '#92400E';
+            }
+            if (estado === 'ENTREGADO') {
+                pill.style.background = '#D1FAE5';
+                pill.style.color = '#065F46';
+            }
         }
 
         function mostrarEntregado(fecha) {

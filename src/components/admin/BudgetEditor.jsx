@@ -162,6 +162,9 @@ const BudgetEditor = ({ editingOrder, onSave, onCancel }) => {
         retiro_sugerido: retiro,
         pagado,
         estado,
+        ...(estado === 'ENTREGADO'
+          ? { entregado_at: editingOrder?.entregado_at || new Date().toISOString() }
+          : {}),
         total,
         franquicia_id: FRANQUICIA_ID,
         numero: finalNro,

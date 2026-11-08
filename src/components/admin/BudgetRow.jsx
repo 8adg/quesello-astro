@@ -42,7 +42,11 @@ export default function BudgetRow({
 
   const updateEstado = async (nuevoEstado) => {
     setUpdating(true);
-    await supabase.from('presupuestos').update({ estado: nuevoEstado }).eq('id', id_db);
+    const updatePayload = {
+      estado: nuevoEstado,
+      ...(nuevoEstado === 'ENTREGADO' ? { entregado_at: new Date().toISOString() } : {}),
+    };
+    await supabase.from('presupuestos').update(updatePayload).eq('id', id_db);
     onRefresh();
     setUpdating(false);
   };

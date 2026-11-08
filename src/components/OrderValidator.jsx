@@ -25,8 +25,13 @@ export default function OrderValidator() {
     const init = async () => {
       try {
         // Fetch PIN validation from settings
-        const { data: pinData } = await supabase.from('ajustes').select('valor').eq('id', 'pin_validacion').single();
-        if (pinData) setCorrectPin(pinData.valor);
+        const { data: cfgPin } = await supabase.from('config').select('valor').eq('clave', 'pin_validacion').maybeSingle();
+        if (cfgPin?.valor) {
+          setCorrectPin(cfgPin.valor);
+        } else {
+          const { data: pinData } = await supabase.from('ajustes').select('valor').eq('id', 'pin_validacion').maybeSingle();
+          if (pinData?.valor) setCorrectPin(pinData.valor);
+        }
 
         // Fetch Order Data
         const { data: order, error } = await supabase
@@ -54,8 +59,19 @@ export default function OrderValidator() {
 
   const formatLabel = (val) => {
     if (!val) return "Sin fecha";
-    const d = new Date(val);
-    if (isNaN(d.getTime())) return val;
+    const str = String(val).trim();
+    const dmyMatch = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:\s+(\d{1,2}):(\d{2}))?$/);
+    if (dmyMatch) {
+      const dd = dmyMatch[1].padStart(2, '0');
+      const mm = dmyMatch[2].padStart(2, '0');
+      const yyyy = dmyMatch[3];
+      if (dmyMatch[4] && dmyMatch[5]) {
+        return `${dd}-${mm}-${yyyy} ${dmyMatch[4].padStart(2, '0')}:${dmyMatch[5]}`;
+      }
+      return `${dd}-${mm}-${yyyy}`;
+    }
+    const d = new Date(str);
+    if (isNaN(d.getTime())) return str;
     return `${d.getDate().toString().padStart(2, '0')}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getFullYear()} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
   };
 
@@ -176,7 +192,7 @@ export default function OrderValidator() {
 
             {orderData.estado === 'ENTREGADO' && (
               <div style={{ color: "#38A169", fontSize: "16px", fontWeight: 700, marginTop: "15px", lineHeight: 1.4, padding: "0 10px" }}>
-                Este pedido ya fue entregado el {formatLabel(orderData.entregado_at || orderData.fecha)}
+                Este pedido ya fue entregado el {formatLabel(orderData.entregado_at || orderData.retiro_sugerido || orderData.fecha)}
               </div>
             )}
           </div>
