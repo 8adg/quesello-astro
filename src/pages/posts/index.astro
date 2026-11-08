@@ -27,20 +27,21 @@ const categories = Object.keys(postsByCategory);
   title="Blog | Queselló!"
   description="Artículos, novedades y consejos sobre sellos de goma y estampado artesanal."
 >
-  <Header />
-  <div
-    style="max-width: 800px; margin: 0 auto; padding: 60px 20px; font-family: 'Inter', sans-serif;"
-  >
-    <a
-      href="/"
-      style="display: inline-flex; align-items: center; gap: 8px; color: #495D56; text-decoration: none; font-weight: 600; font-size: 14px;position:absolute;top:28px;left:30px;"
+  <div style="width: calc(100% - 30px); max-width: 780px; margin: 0 auto; position: relative;">
+    <Header />
+    <div
+      style="max-width: 800px; margin: 0 auto; padding: 40px 20px 60px 20px; font-family: 'Inter', sans-serif;"
     >
-      <span
-        style="font-size: 12px; padding: 3px 10px; border-radius: 20px; font-weight: 500; background: rgb(209, 250, 229); color: rgb(6, 95, 70);"
+      <a
+        href="/"
+        style="display: inline-flex; align-items: center; gap: 8px; color: #495D56; text-decoration: none; font-weight: 600; font-size: 14px; position: absolute; top: 28px; left: 8px;"
       >
-        « Volver</span
-      >
-    </a>
+        <span
+          style="font-size: 12px; padding: 3px 10px; border-radius: 20px; font-weight: 500; background: rgb(209, 250, 229); color: rgb(6, 95, 70);"
+        >
+          « Volver</span
+        >
+      </a>
 
     <h1
       style="font-size: 40px; font-weight: 900; color: #3b5276; margin: 0 0 8px 0;"
@@ -67,6 +68,7 @@ const categories = Object.keys(postsByCategory);
         </p>
       )
     }
+    </div>
   </div>
   <Footer />
 </Layout>
