@@ -156,7 +156,9 @@ export default function PostsManager() {
   const dragOverPost = useRef();
   const coverInputRef = useRef(null);
   const inlineInputRef = useRef(null);
+  const replaceInlineInputRef = useRef(null);
   const mdTextareaRef = useRef(null);
+  const [replacingInlineTarget, setReplacingInlineTarget] = useState(null);
 
   const [form, setForm] = useState({
     titulo: '', subtitulo: '', resumen: '', imagen_url: '', contenido_md: '', slug: '', categoria: '', fecha_publicacion: '', publicado: false
@@ -211,6 +213,45 @@ export default function PostsManager() {
     } catch (e) { console.error('Deploy trigger error:', e); }
   };
 
+  const extractStoragePath = (url) => {
+    if (!url || typeof url !== 'string') return null;
+    const marker = '/storage/v1/object/public/catalogo/';
+    const idx = url.indexOf(marker);
+    if (idx === -1) return null;
+    return decodeURIComponent(url.slice(idx + marker.length).split('?')[0]);
+  };
+
+  const deleteFromStorageIfManaged = async (url) => {
+    const path = extractStoragePath(url);
+    if (!path) return false;
+    try {
+      await supabase.storage.from('catalogo').remove([path]);
+      return true;
+    } catch (e) {
+      console.warn('No se pudo borrar archivo previo de Storage:', e);
+      return false;
+    }
+  };
+
+  const extractInlineImages = (mdText) => {
+    if (!mdText) return [];
+    const results = [];
+    const imgRegex = /<img\b[^>]*?\bsrc=["']([^"']+)["'][^>]*?>/gi;
+    let match;
+    while ((match = imgRegex.exec(mdText)) !== null) {
+      const fullTag = match[0];
+      const src = match[1];
+      const fileName = decodeURIComponent(src.split('/').pop()?.split('?')[0] || 'imagen');
+      results.push({
+        fullTag,
+        src,
+        fileName,
+        isStorage: Boolean(extractStoragePath(src))
+      });
+    }
+    return results;
+  };
+
   const uploadProcessedImage = async (file) => {
     const prepared = await prepareImageForUpload(file);
     const folderSlug = form.slug ? slugify(form.slug) : 'general';
@@ -250,15 +291,81 @@ export default function PostsManager() {
     e.target.value = '';
     if (!file) return;
 
+    const previousUrl = form.imagen_url;
     setUploadingCover(true);
     try {
       const result = await uploadProcessedImage(file);
+      if (previousUrl && previousUrl !== result.publicUrl) {
+        await deleteFromStorageIfManaged(previousUrl);
+      }
       setForm(f => ({ ...f, imagen_url: result.publicUrl }));
       setMsg({ type: 'success', text: `Portada subida: ${formatUploadNotice(result)}` });
     } catch (err) {
       setMsg({ type: 'error', text: 'Error al subir portada: ' + err.message });
     } finally {
       setUploadingCover(false);
+      setTimeout(() => setMsg(null), 5000);
+    }
+  };
+
+  const handleRemoveCover = async () => {
+    if (!form.imagen_url) return;
+    if (!confirm('¿Quitar la imagen de portada? Si está en Supabase Storage también se liberará su espacio.')) return;
+    const removedFromStorage = await deleteFromStorageIfManaged(form.imagen_url);
+    setForm(f => ({ ...f, imagen_url: '' }));
+    setMsg({
+      type: 'success',
+      text: removedFromStorage ? 'Portada eliminada de Supabase Storage' : 'Portada quitada del post'
+    });
+    setTimeout(() => setMsg(null), 4000);
+  };
+
+  const handleRemoveInlineImage = async (imgItem) => {
+    if (!confirm(`¿Eliminar "${imgItem.fileName}" del post?${imgItem.isStorage ? ' También se borrará el archivo de Supabase Storage.' : ''}`)) return;
+    if (imgItem.isStorage) {
+      await deleteFromStorageIfManaged(imgItem.src);
+    }
+    setForm(f => ({
+      ...f,
+      contenido_md: (f.contenido_md || '').replace(imgItem.fullTag, '').replace(/\n{3,}/g, '\n\n')
+    }));
+    setMsg({
+      type: 'success',
+      text: imgItem.isStorage ? `Imagen "${imgItem.fileName}" eliminada del post y de Supabase` : `Imagen "${imgItem.fileName}" quitada del post`
+    });
+    setTimeout(() => setMsg(null), 4000);
+  };
+
+  const triggerReplaceInlineImage = (imgItem) => {
+    setReplacingInlineTarget(imgItem);
+    replaceInlineInputRef.current?.click();
+  };
+
+  const handleReplaceInlineUpload = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    const target = replacingInlineTarget;
+    setReplacingInlineTarget(null);
+    if (!file || !target) return;
+
+    setUploadingInline(true);
+    try {
+      const result = await uploadProcessedImage(file);
+      if (target.isStorage && target.src !== result.publicUrl) {
+        await deleteFromStorageIfManaged(target.src);
+      }
+      setForm(f => ({
+        ...f,
+        contenido_md: (f.contenido_md || '').split(target.src).join(result.publicUrl)
+      }));
+      setMsg({
+        type: 'success',
+        text: `Imagen reemplazada: ${formatUploadNotice(result)}`
+      });
+    } catch (err) {
+      setMsg({ type: 'error', text: 'Error al reemplazar imagen: ' + err.message });
+    } finally {
+      setUploadingInline(false);
       setTimeout(() => setMsg(null), 5000);
     }
   };
@@ -335,7 +442,19 @@ export default function PostsManager() {
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('¿Eliminar este post?')) return;
+    if (!confirm('¿Eliminar este post y sus imágenes alojadas en Supabase?')) return;
+    const postToDelete = posts.find(x => x.id === id);
+    if (postToDelete) {
+      if (postToDelete.imagen_url) {
+        await deleteFromStorageIfManaged(postToDelete.imagen_url);
+      }
+      const inlineImgs = extractInlineImages(postToDelete.contenido_md);
+      for (const img of inlineImgs) {
+        if (img.isStorage) {
+          await deleteFromStorageIfManaged(img.src);
+        }
+      }
+    }
     await supabase.from('posts').delete().eq('id', id);
     loadPosts();
   };
@@ -472,15 +591,33 @@ export default function PostsManager() {
                 </button>
               </div>
               {form.imagen_url && (
-                <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '12px', background: '#F8FAFC', padding: '10px 14px', borderRadius: '14px', border: '1px solid #F1F5F9' }}>
                   <img
                     src={form.imagen_url}
                     alt="Portada"
-                    style={{ width: '64px', height: '42px', objectFit: 'cover', borderRadius: '10px', border: '1px solid #E2E8F0' }}
+                    style={{ width: '64px', height: '42px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #E2E8F0', flexShrink: 0 }}
                   />
-                  <span style={{ fontSize: '12px', color: '#64748B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <span style={{ fontSize: '12px', color: '#64748B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
                     {form.imagen_url}
                   </span>
+                  <button
+                    type="button"
+                    onClick={() => coverInputRef.current?.click()}
+                    title="Cambiar portada"
+                    style={{ background: '#F4F1E1', color: '#495D56', border: 'none', padding: '7px 12px', borderRadius: '10px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '5px', flexShrink: 0 }}
+                  >
+                    <img src="https://api.iconify.design/lucide/refresh-cw.svg?color=%23495D56" style={{ width: '13px', height: '13px' }} alt="" />
+                    Cambiar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleRemoveCover}
+                    title="Borrar portada"
+                    style={{ background: '#FEE2E2', color: '#991B1B', border: 'none', padding: '7px 12px', borderRadius: '10px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '5px', flexShrink: 0 }}
+                  >
+                    <img src="https://api.iconify.design/lucide/trash-2.svg?color=%23991B1B" style={{ width: '13px', height: '13px' }} alt="" />
+                    Borrar
+                  </button>
                 </div>
               )}
             </div>
@@ -498,6 +635,13 @@ export default function PostsManager() {
                     accept="image/*,.webp"
                     multiple
                     onChange={handleInlineUpload}
+                    style={{ display: 'none' }}
+                  />
+                  <input
+                    ref={replaceInlineInputRef}
+                    type="file"
+                    accept="image/*,.webp"
+                    onChange={handleReplaceInlineUpload}
                     style={{ display: 'none' }}
                   />
                   <button
@@ -532,6 +676,54 @@ export default function PostsManager() {
                 onChange={e => setForm(f => ({ ...f, contenido_md: e.target.value }))}
                 placeholder="## Título&#10;&#10;Escribí el contenido en Markdown..."
               />
+
+              {extractInlineImages(form.contenido_md).length > 0 && (
+                <div style={{ marginTop: '14px', background: '#F8FAFC', borderRadius: '16px', padding: '14px 16px', border: '1px solid #F1F5F9' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#998E55', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px' }}>
+                    Imágenes insertadas en el post ({extractInlineImages(form.contenido_md).length})
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {extractInlineImages(form.contenido_md).map((imgItem, idx) => (
+                      <div
+                        key={`${imgItem.src}-${idx}`}
+                        style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'white', padding: '8px 12px', borderRadius: '12px', border: '1px solid #F1F5F9' }}
+                      >
+                        <img
+                          src={imgItem.src}
+                          alt={imgItem.fileName}
+                          style={{ width: '52px', height: '38px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #E2E8F0', flexShrink: 0 }}
+                        />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: '13px', fontWeight: 700, color: '#1E293B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {imgItem.fileName}
+                          </div>
+                          <div style={{ fontSize: '11px', color: '#94A3B8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {imgItem.isStorage ? 'Supabase Storage (gestionada)' : imgItem.src}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => triggerReplaceInlineImage(imgItem)}
+                          title="Cambiar por otra imagen"
+                          style={{ background: '#F4F1E1', color: '#495D56', border: 'none', padding: '6px 12px', borderRadius: '10px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '5px', flexShrink: 0 }}
+                        >
+                          <img src="https://api.iconify.design/lucide/refresh-cw.svg?color=%23495D56" style={{ width: '13px', height: '13px' }} alt="" />
+                          Cambiar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveInlineImage(imgItem)}
+                          title="Borrar imagen del post y de Supabase"
+                          style={{ background: '#FEE2E2', color: '#991B1B', border: 'none', padding: '6px 12px', borderRadius: '10px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '5px', flexShrink: 0 }}
+                        >
+                          <img src="https://api.iconify.design/lucide/trash-2.svg?color=%23991B1B" style={{ width: '13px', height: '13px' }} alt="" />
+                          Borrar
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
