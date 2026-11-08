@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import ProductRow from './ProductRow';
+import PricingToolsModal from './PricingToolsModal';
 import { supabase } from '../../lib/supabase';
 
 export default function ProductManager() {
@@ -118,17 +119,24 @@ export default function ProductManager() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', fontFamily: 'Inter' }}>
       
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', flexWrap: 'wrap', gap: '12px' }}>
         <h1 style={{ fontSize: '28px', color: '#FF5E5E', fontWeight: 800, margin: 0 }}>Catalogo de Productos</h1>
-        <button 
-          onClick={handleCreate}
-          style={{ 
-            background: '#FF5E5E', color: 'white', border: 'none', padding: '12px 24px', 
-            borderRadius: '20px', fontWeight: 500, cursor: 'pointer', fontSize: '14px'
-          }}
-        >
-          Nuevo Producto
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          <PricingToolsModal
+            products={products}
+            onProductsUpdated={loadData}
+            tableName="productos"
+          />
+          <button 
+            onClick={handleCreate}
+            style={{ 
+              background: '#FF5E5E', color: 'white', border: 'none', padding: '12px 24px', 
+              borderRadius: '20px', fontWeight: 500, cursor: 'pointer', fontSize: '14px'
+            }}
+          >
+            Nuevo Producto
+          </button>
+        </div>
       </header>
 
       <hr style={{ border: 'none', height: '2px', background: '#aba9a4', opacity: 0.2, margin: '24px 0' }} />

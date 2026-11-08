@@ -150,7 +150,8 @@ export default function AdminSidebar({ activeId = 'dashboard' }) {
                     gap: '8px',
                   }}
                 >
-                  <span>🔔</span> Notificaciones en celular
+                  <img src="https://api.iconify.design/lucide/bell.svg?color=%234b3b28" style={{ width: '16px', height: '16px' }} alt="" />
+                  <span>Notificaciones en celular</span>
                 </button>
 
                 <a
@@ -168,7 +169,8 @@ export default function AdminSidebar({ activeId = 'dashboard' }) {
                     gap: '8px',
                   }}
                 >
-                  <span>📰</span> Administrar Posts
+                  <img src="https://api.iconify.design/lucide/newspaper.svg?color=%23495D56" style={{ width: '16px', height: '16px' }} alt="" />
+                  <span>Administrar Posts</span>
                 </a>
 
                 <button
@@ -295,9 +297,13 @@ export default function AdminSidebar({ activeId = 'dashboard' }) {
                   textDecoration: 'underline',
                   cursor: 'pointer',
                   fontFamily: 'Inter',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
                 }}
               >
-                🔔 Push Celular
+                <img src="https://api.iconify.design/lucide/bell.svg?color=%23FF5E5E" style={{ width: '13px', height: '13px' }} alt="" />
+                <span>Push Celular</span>
               </button>
             </div>
           )}

@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../../lib/supabase';
 import { getOrderSvgUrl, getOrderDjUrl, cleanObservacionesText, mergeObservacionesWithSvg, downloadSvgDirect, downloadPdfDirect } from './svgOrderUtils';
+import { requoteBudgetItems, quoteCustomDimension } from '../../lib/pricingEngine';
 
 const BudgetEditor = ({ editingOrder, onSave, onCancel }) => {
   const [catalogo, setCatalogo] = useState([]);
@@ -19,6 +20,13 @@ const BudgetEditor = ({ editingOrder, onSave, onCancel }) => {
   const [descLabel, setDescLabel] = useState("");
   const [descValor, setDescValor] = useState("");
   const [descTipo, setDescTipo] = useState("$");
+
+  // Estados para Recotización y Cotizador Rectangular (L+A)
+  const [requoteSummary, setRequoteSummary] = useState(null);
+  const [showCustomQuoter, setShowCustomQuoter] = useState(false);
+  const [customWidth, setCustomWidth] = useState(9);
+  const [customHeight, setCustomHeight] = useState(6);
+  const [customPriceOverride, setCustomPriceOverride] = useState("");
   
   const [loading, setLoading] = useState(false);
   const FRANQUICIA_ID = 1;
@@ -84,6 +92,55 @@ const BudgetEditor = ({ editingOrder, onSave, onCancel }) => {
     const newC = [...carrito]; newC.splice(idx, 1); setCarrito(newC);
   };
 
+  const actualizarItemCarrito = (idx, field, value) => {
+    const newC = [...carrito];
+    const current = { ...newC[idx] };
+    if (field === 'cantidad') {
+      const q = Math.max(1, parseInt(value, 10) || 1);
+      current.cantidad = q;
+      current.total = q * Number(current.precio_unitario || 0);
+    } else if (field === 'precio_unitario') {
+      const p = parseFloat(value);
+      const unitP = isNaN(p) ? 0 : p;
+      current.precio_unitario = unitP;
+      current.total = Number(current.cantidad || 1) * unitP;
+    }
+    newC[idx] = current;
+    setCarrito(newC);
+  };
+
+  const customQuotePreview = useMemo(() => {
+    return quoteCustomDimension(customWidth, customHeight, catalogo);
+  }, [customWidth, customHeight, catalogo]);
+
+  useEffect(() => {
+    setCustomPriceOverride("");
+  }, [customWidth, customHeight]);
+
+  const handleAgregarMedidaEspecial = () => {
+    const finalUnitPrice =
+      customPriceOverride !== "" && !isNaN(Number(customPriceOverride))
+        ? Number(customPriceOverride)
+        : customQuotePreview.unitPrice;
+    agregarAlCarrito({
+      descripcion: `SELLO ${customWidth}X${customHeight}CM`,
+      precio: finalUnitPrice,
+    });
+    setShowCustomQuoter(false);
+    setCustomPriceOverride("");
+  };
+
+  const handleRequoteToCurrentCatalog = () => {
+    if (carrito.length === 0) return;
+    const result = requoteBudgetItems(carrito, catalogo);
+    setRequoteSummary(result);
+    if (!result.hasChanges) {
+      alert("Este presupuesto ya tiene los precios vigentes de la lista actual.");
+      return;
+    }
+    setCarrito(result.updatedItems);
+  };
+
   const total = carrito.reduce((a, b) => a + b.total, 0);
 
   const handleGuardar = async () => {
@@ -134,14 +191,113 @@ const BudgetEditor = ({ editingOrder, onSave, onCancel }) => {
       
       {/* COLUMNA IZQUIERDA: CATÁLOGO */}
       <div className="be-col-catalogo">
-        <h3 style={{ marginBottom: '10px', fontSize: '13px', fontWeight: 900, color: '#998E55', letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: 'Inter' }}>Catálogo</h3>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+          <h3 style={{ margin: 0, fontSize: '13px', fontWeight: 900, color: '#998E55', letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: 'Inter' }}>Catálogo</h3>
+          <button
+            type="button"
+            onClick={() => setShowCustomQuoter((v) => !v)}
+            style={{
+              background: showCustomQuoter ? '#FF5E5E' : '#F4F1E1',
+              color: showCustomQuoter ? '#FFFFFF' : '#495D56',
+              border: 'none',
+              borderRadius: '14px',
+              padding: '6px 12px',
+              fontSize: '11px',
+              fontWeight: 600,
+              fontFamily: 'Inter',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              cursor: 'pointer',
+            }}
+          >
+            <img
+              src={`https://api.iconify.design/lucide/ruler.svg?color=${encodeURIComponent(showCustomQuoter ? '#FFFFFF' : '#495D56')}`}
+              style={{ width: '14px', height: '14px' }}
+              alt=""
+            />
+            <span>Medida Especial (L+A)</span>
+          </button>
+        </div>
+
+        {showCustomQuoter && (
+          <div
+            style={{
+              background: '#FAF9F6',
+              border: '1px solid #DFDED9',
+              borderRadius: '16px',
+              padding: '12px',
+              marginBottom: '10px',
+              fontFamily: 'Inter',
+            }}
+          >
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.2fr', gap: '8px', marginBottom: '8px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '10px', fontWeight: 700, color: '#998E55', marginBottom: '4px' }}>ANCHO (CM)</label>
+                <input
+                  type="number"
+                  step="0.5"
+                  min="1"
+                  value={customWidth}
+                  onChange={(e) => setCustomWidth(e.target.value)}
+                  style={{ ...inputStyle, marginBottom: 0, padding: '8px 10px' }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '10px', fontWeight: 700, color: '#998E55', marginBottom: '4px' }}>ALTO (CM)</label>
+                <input
+                  type="number"
+                  step="0.5"
+                  min="1"
+                  value={customHeight}
+                  onChange={(e) => setCustomHeight(e.target.value)}
+                  style={{ ...inputStyle, marginBottom: 0, padding: '8px 10px' }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '10px', fontWeight: 700, color: '#998E55', marginBottom: '4px' }}>PRECIO EDITABLE ($)</label>
+                <input
+                  type="number"
+                  step="50"
+                  value={customPriceOverride !== "" ? customPriceOverride : customQuotePreview.unitPrice}
+                  onChange={(e) => setCustomPriceOverride(e.target.value)}
+                  style={{ ...inputStyle, marginBottom: 0, padding: '8px 10px', fontWeight: 700, color: '#8E1F52' }}
+                />
+              </div>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '11px', color: '#495D56' }}>
+                {customQuotePreview.ruleApplied}
+              </span>
+              <button
+                type="button"
+                onClick={handleAgregarMedidaEspecial}
+                style={{
+                  background: '#FF5E5E',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  borderRadius: '10px',
+                  padding: '6px 12px',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  fontFamily: 'Inter',
+                  flexShrink: 0,
+                }}
+              >
+                + Agregar al pedido
+              </button>
+            </div>
+          </div>
+        )}
+
         <input type="text" placeholder="BUSCAR PRODUCTO..." value={busquedaProd} onChange={e => setBusquedaProd(e.target.value)} style={inputStyle} />
         <div className="be-catalogo-scroll">
           {catalogo.filter(p => p.descripcion.toLowerCase().includes(busquedaProd.toLowerCase())).map(p => (
             <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px', borderBottom: '1px solid #f1f5f9' }}>
-              <span style={{ fontSize: '12px', fontWeight: 700 }}>{p.descripcion.toUpperCase()}</span>
+              <span style={{ fontSize: '12px', fontWeight: 700, color: '#5E7358' }}>{p.descripcion.toUpperCase()}</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span style={{ fontWeight: 800 }}>${p.precio}</span>
+                <span style={{ fontWeight: 700, color: '#8E1F52' }}>${p.precio?.toLocaleString('es-AR')}</span>
                 <button onClick={() => agregarAlCarrito(p)} style={{ background: '#FF5E5E', color: 'white', border: 'none', borderRadius: '10px', padding: '5px 14px', cursor: 'pointer', fontWeight: 800, fontFamily: 'Inter' }}>+</button>
               </div>
             </div>
@@ -221,14 +377,103 @@ const BudgetEditor = ({ editingOrder, onSave, onCancel }) => {
           <input type="datetime-local" value={retiro} onChange={e => setRetiro(e.target.value)} style={inputStyle} />
         </div>
 
-        {/* LISTADO CARRITO */}
+        {/* BARRA DE RECOTIZACIÓN Y CONTROL DE ÍTEMS */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '10px', fontWeight: 800, color: '#998E55', letterSpacing: '0.03em' }}>
+            ÍTEMS DEL PRESUPUESTO (PRECIO EDITABLE)
+          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            {requoteSummary?.hasChanges && (
+              <span style={{ fontSize: '11px', fontWeight: 700, color: '#8E1F52' }}>
+                Anterior: ${requoteSummary.oldSubtotal.toLocaleString('es-AR')} → Nuevo: ${requoteSummary.newSubtotal.toLocaleString('es-AR')} ({requoteSummary.deltaAmount >= 0 ? '+' : ''}{requoteSummary.deltaPct}%)
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={handleRequoteToCurrentCatalog}
+              disabled={carrito.length === 0}
+              style={{
+                background: '#F4F1E1',
+                color: '#495D56',
+                border: 'none',
+                borderRadius: '14px',
+                padding: '6px 12px',
+                fontSize: '11px',
+                fontWeight: 600,
+                fontFamily: 'Inter',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                cursor: carrito.length === 0 ? 'default' : 'pointer',
+                opacity: carrito.length === 0 ? 0.5 : 1,
+              }}
+            >
+              <img
+                src="https://api.iconify.design/lucide/refresh-cw.svg?color=%23495D56"
+                style={{ width: '13px', height: '13px' }}
+                alt=""
+              />
+              <span>Recotizar a Lista Actual</span>
+            </button>
+          </div>
+        </div>
+
+        {/* LISTADO CARRITO CON EDICIÓN MANUAL DE CANTIDAD Y PRECIO */}
         <div style={{ flex: 1, minHeight: '90px', overflowY: 'auto', border: '1px solid #f1f5f9', borderRadius: '12px', padding: '10px', marginBottom: '15px', background: '#f8fafc' }}>
           {carrito.map((c, i) => (
-            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '13px', fontWeight: 700, gap: '8px' }}>
-              <span style={{ color: c.total < 0 ? '#dc2626' : '#1e293b', wordBreak: 'break-word' }}>{c.cantidad}x {c.descripcion}</span>
-              <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexShrink: 0 }}>
-                <span style={{ color: c.total < 0 ? '#dc2626' : '#0f172a' }}>${c.total.toLocaleString()}</span>
-                <button onClick={() => quitarDelCarrito(i)} style={{ border: 'none', background: 'none', color: '#dc2626', fontWeight: 900, cursor: 'pointer' }}>×</button>
+            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', fontSize: '12px', fontWeight: 700, gap: '8px', paddingBottom: '6px', borderBottom: '1px solid #eef2f6' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, minWidth: 0 }}>
+                <input
+                  type="number"
+                  min="1"
+                  value={c.cantidad}
+                  onChange={(e) => actualizarItemCarrito(i, 'cantidad', e.target.value)}
+                  style={{
+                    width: '44px',
+                    padding: '4px 6px',
+                    borderRadius: '8px',
+                    border: '1px solid #DFDED9',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    color: '#495D56',
+                    textAlign: 'center',
+                    fontFamily: 'Inter',
+                  }}
+                />
+                <span style={{ color: c.total < 0 ? '#dc2626' : '#495D56', wordBreak: 'break-word' }}>
+                  {c.descripcion}
+                </span>
+              </div>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }}>
+                <input
+                  type="number"
+                  step="50"
+                  value={c.precio_unitario}
+                  onChange={(e) => actualizarItemCarrito(i, 'precio_unitario', e.target.value)}
+                  title="Editar precio unitario manualmente"
+                  style={{
+                    width: '86px',
+                    padding: '4px 8px',
+                    borderRadius: '8px',
+                    border: '1px solid #DFDED9',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    color: c.total < 0 ? '#dc2626' : '#8E1F52',
+                    textAlign: 'right',
+                    fontFamily: 'Inter',
+                  }}
+                />
+                <span style={{ minWidth: '68px', textAlign: 'right', color: c.total < 0 ? '#dc2626' : '#8E1F52' }}>
+                  ${Number(c.total || 0).toLocaleString('es-AR')}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => quitarDelCarrito(i)}
+                  style={{ border: 'none', background: 'none', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center' }}
+                  title="Quitar ítem"
+                >
+                  <img src="https://api.iconify.design/lucide/x.svg?color=%23dc2626" style={{ width: '15px', height: '15px' }} alt="Quitar" />
+                </button>
               </div>
             </div>
           ))}
@@ -244,16 +489,16 @@ const BudgetEditor = ({ editingOrder, onSave, onCancel }) => {
 
         {/* ESTADOS */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '15px' }}>
-          <select value={pagado ? "T" : "F"} onChange={e => setPagado(e.target.value === "T")} style={{ ...inputStyle, background: pagado ? '#dcfce7' : '#fee2e2', fontWeight: 800 }}>
-            <option value="F">❌ IMPAGO</option>
-            <option value="T">✅ PAGADO</option>
+          <select value={pagado ? "T" : "F"} onChange={e => setPagado(e.target.value === "T")} style={{ ...inputStyle, background: pagado ? '#dcfce7' : '#fee2e2', color: pagado ? '#166534' : '#991b1b', fontWeight: 800 }}>
+            <option value="F">IMPAGO</option>
+            <option value="T">PAGADO</option>
           </select>
-          <select value={estado} onChange={e => setEstado(e.target.value)} style={{ ...inputStyle, fontWeight: 800 }}>
-            <option value="PAUSADO">⏳ PAUSADO</option>
-            <option value="PENDIENTE">📦 PRE-PEDIDO</option>
-            <option value="EN PROCESO">🏗️ EN PROCESO</option>
-            <option value="EN PUNTO DE ENTREGA">📍 ENTREGA</option>
-            <option value="ENTREGADO">✅ ENTREGADO</option>
+          <select value={estado} onChange={e => setEstado(e.target.value)} style={{ ...inputStyle, color: '#495D56', fontWeight: 800 }}>
+            <option value="PAUSADO">BORRADOR</option>
+            <option value="PENDIENTE">PRE-PEDIDO</option>
+            <option value="EN PROCESO">EN PROCESO</option>
+            <option value="EN PUNTO DE ENTREGA">PUNTO ENTREGA</option>
+            <option value="ENTREGADO">ENTREGADO</option>
           </select>
         </div>
 

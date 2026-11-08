@@ -345,20 +345,26 @@ export default function MpReconciliation({ onBack }) {
             type="button"
             onClick={() => setShowTokenConfig(v => !v)}
             style={{
-              border: '1px solid #E2E8F0',
-              background: showTokenConfig ? '#1E293B' : 'white',
-              color: showTokenConfig ? 'white' : '#475569',
-              padding: '8px 14px',
-              borderRadius: '14px',
+              border: 'none',
+              background: showTokenConfig ? '#495D56' : '#F4F1E1',
+              color: showTokenConfig ? 'white' : '#495D56',
+              padding: '9px 16px',
+              borderRadius: '16px',
               fontSize: '12px',
-              fontWeight: 700,
+              fontWeight: 600,
+              fontFamily: 'Inter',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '6px'
+              gap: '7px'
             }}
           >
-            ⚙️ Credenciales MP
+            <img
+              src={`https://api.iconify.design/lucide/settings.svg?color=${encodeURIComponent(showTokenConfig ? '#FFFFFF' : '#495D56')}`}
+              style={{ width: '15px', height: '15px' }}
+              alt=""
+            />
+            <span>Credenciales MP</span>
           </button>
 
           {/* TABS */}
@@ -481,14 +487,18 @@ export default function MpReconciliation({ onBack }) {
                 background: 'white',
                 border: '1px solid #CBD5E1',
                 borderRadius: '8px',
-                padding: '4px 10px',
+                padding: '5px 10px',
                 fontSize: '11px',
                 fontWeight: 700,
                 cursor: 'pointer',
-                color: '#1E293B'
+                color: '#1E293B',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px'
               }}
             >
-              📋 Copiar URL Webhook
+              <img src="https://api.iconify.design/lucide/copy.svg?color=%231E293B" style={{ width: '13px', height: '13px' }} alt="" />
+              <span>Copiar URL Webhook</span>
             </button>
           </div>
         </div>

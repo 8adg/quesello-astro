@@ -21,3 +21,68 @@ COMMENT ON COLUMN public.pagos_recibidos_mp.payer_name IS 'Nombre completo del t
 COMMENT ON COLUMN public.pagos_recibidos_mp.payer_document IS 'DNI/CUIT/CUIL del titular';
 COMMENT ON COLUMN public.pagos_recibidos_mp.concepto IS 'Concepto o referencia textual ingresado por el emisor';
 COMMENT ON COLUMN public.pagos_recibidos_mp.presupuesto_id IS 'ID del presupuesto asociado en Queselló';
+
+
+
+-- ============================================================================
+-- MIGRACIÓN SUPABASE: DIMENSIONES GEOMÉTRICAS, CURVA DE PRECIOS Y RPC MASIVO
+-- Adaptado al esquema real: tabla public.productos (codigo, descripcion, categoria, precio)
+-- ============================================================================
+
+-- 1. Agregar columnas geométricas y de benchmark CABA a la tabla productos
+ALTER TABLE public.productos ADD COLUMN IF NOT EXISTS width_cm NUMERIC(6,2);
+ALTER TABLE public.productos ADD COLUMN IF NOT EXISTS height_cm NUMERIC(6,2);
+ALTER TABLE public.productos ADD COLUMN IF NOT EXISTS is_reference_square BOOLEAN DEFAULT FALSE;
+ALTER TABLE public.productos ADD COLUMN IF NOT EXISTS caba_benchmark_price NUMERIC(12,2);
+ALTER TABLE public.productos ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+
+-- 2. Poblar ancho, alto y referencias en las medidas existentes de sellos
+UPDATE public.productos SET width_cm = 2, height_cm = 3, is_reference_square = FALSE WHERE codigo = 'QS-026';
+UPDATE public.productos SET width_cm = 4, height_cm = 1.5, is_reference_square = FALSE WHERE codigo = 'QS-004';
+UPDATE public.productos SET width_cm = 4, height_cm = 4, is_reference_square = TRUE, caba_benchmark_price = 8500 WHERE codigo = 'QS-005';
+UPDATE public.productos SET width_cm = 5, height_cm = 5, is_reference_square = TRUE, caba_benchmark_price = 11000 WHERE codigo = 'QS-006';
+UPDATE public.productos SET width_cm = 6, height_cm = 6, is_reference_square = TRUE WHERE codigo = 'QS-007';
+UPDATE public.productos SET width_cm = 7, height_cm = 7, is_reference_square = TRUE WHERE codigo = 'QS-008';
+UPDATE public.productos SET width_cm = 8, height_cm = 8, is_reference_square = TRUE, caba_benchmark_price = 35437 WHERE codigo = 'QS-009';
+UPDATE public.productos SET width_cm = 9, height_cm = 9, is_reference_square = TRUE WHERE codigo = 'QS-010';
+UPDATE public.productos SET width_cm = 10, height_cm = 10, is_reference_square = TRUE, caba_benchmark_price = 14641 WHERE codigo = 'QS-011';
+UPDATE public.productos SET width_cm = 11, height_cm = 11, is_reference_square = TRUE WHERE codigo = 'QS-012';
+UPDATE public.productos SET width_cm = 12, height_cm = 12, is_reference_square = TRUE WHERE codigo = 'QS-013';
+UPDATE public.productos SET width_cm = 13, height_cm = 13, is_reference_square = TRUE WHERE codigo = 'QS-035';
+UPDATE public.productos SET width_cm = 14, height_cm = 14, is_reference_square = TRUE WHERE codigo = 'QS-036';
+UPDATE public.productos SET width_cm = 15, height_cm = 15, is_reference_square = TRUE, caba_benchmark_price = 50500 WHERE codigo = 'QS-014';
+UPDATE public.productos SET width_cm = 4, height_cm = 6, is_reference_square = FALSE WHERE codigo = 'QS-030';
+UPDATE public.productos SET width_cm = 9, height_cm = 6, is_reference_square = FALSE, caba_benchmark_price = 16837 WHERE codigo = 'QS-032';
+
+-- 3. (Opcional / también ejecutable con edición manual desde PricingToolsModal en el Admin)
+-- Actualización de curva sobre los códigos existentes (sin crear duplicados):
+-- UPDATE public.productos SET precio = 17000, updated_at = NOW() WHERE codigo = 'QS-030';
+-- UPDATE public.productos SET precio = 21950, updated_at = NOW() WHERE codigo = 'QS-032';
+-- UPDATE public.productos SET precio = 33500, updated_at = NOW() WHERE codigo = 'QS-013';
+
+-- 4. Función RPC para ajuste masivo de precios con redondeo comercial
+CREATE OR REPLACE FUNCTION public.bulk_adjust_product_prices(
+  p_percentage NUMERIC,
+  p_category TEXT DEFAULT NULL,
+  p_round_step NUMERIC DEFAULT 50
+)
+RETURNS TABLE (codigo TEXT, old_price NUMERIC, new_price NUMERIC)
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  RETURN QUERY
+  WITH old_data AS (
+    SELECT p.id, p.codigo, p.precio AS prev_price
+    FROM public.productos p
+    WHERE (p_category IS NULL OR p_category = 'TODAS' OR UPPER(p.categoria) = UPPER(p_category))
+  )
+  UPDATE public.productos p
+  SET
+    precio = ROUND((p.precio * (1 + p_percentage / 100.0)) / p_round_step) * p_round_step,
+    updated_at = NOW()
+  FROM old_data o
+  WHERE p.id = o.id
+  RETURNING p.codigo::TEXT, o.prev_price::NUMERIC AS old_price, p.precio::NUMERIC AS new_price;
+END;
+$$;
