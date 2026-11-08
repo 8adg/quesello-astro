@@ -28,7 +28,9 @@ const { data: post } = await supabase
 
 if (!post) return Astro.redirect("/posts");
 
-const contenidoHtml = post.contenido_md ? marked(post.contenido_md) : "";
+const rawHtml = post.contenido_md ? marked(post.contenido_md) : "";
+// Asegurar que **texto** o ** texto ** se convierta en <strong> incluso dentro de bloques HTML (<p>, <div>)
+const contenidoHtml = rawHtml.replace(/\*\*\s*([^\n*]+?)\s*\*\*/g, "<strong>$1</strong>");
 
 const fecha = new Date(post.creado_en);
 const fechaFormateada = `Publicado el ${fecha.getDate()}/${fecha.getMonth() + 1}/${fecha.getFullYear()}`;
