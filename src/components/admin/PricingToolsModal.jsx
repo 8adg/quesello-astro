@@ -6,6 +6,7 @@ import {
   auditCatalogAnomalies,
   roundCommercial,
 } from '../../lib/pricingEngine';
+import { generatePriceListPDF } from '../../lib/priceListPdfGenerator';
 
 const LinearIcon = ({ name, color = '#495D56', size = 18 }) => (
   <img
@@ -34,6 +35,9 @@ export default function PricingToolsModal({
   const [manualUnitOverride, setManualUnitOverride] = useState('');
   const [cabaFreight, setCabaFreight] = useState(9000);
   const [oldBudgetTotal, setOldBudgetTotal] = useState('');
+  const [customProductCode, setCustomProductCode] = useState('');
+  const [customProductDesc, setCustomProductDesc] = useState('');
+  const [savingCustomProduct, setSavingCustomProduct] = useState(false);
 
   // Estado Pestaña 2: Edición manual de precios sugeridos en Curva
   const [curveEdits, setCurveEdits] = useState({});
@@ -44,6 +48,13 @@ export default function PricingToolsModal({
   const [bulkCategory, setBulkCategory] = useState('TODAS');
   const [roundStep, setRoundStep] = useState(50);
   const [bulkOverrides, setBulkOverrides] = useState({});
+
+  // Estado Pestaña 4: Exportar Lista Completa en PDF (Oficial / Reventa con Descuento)
+  const [pdfDiscountPct, setPdfDiscountPct] = useState(0);
+  const [pdfRoundStep, setPdfRoundStep] = useState(50);
+  const [pdfShowComparison, setPdfShowComparison] = useState(true);
+  const [pdfIncludeEsp, setPdfIncludeEsp] = useState(false);
+  const [pdfCustomTitle, setPdfCustomTitle] = useState('');
 
   // Auditoría automática de la curva actual en Supabase
   const audit = useMemo(() => auditCatalogAnomalies(products), [products]);
@@ -69,6 +80,46 @@ export default function PricingToolsModal({
   useEffect(() => {
     setManualUnitOverride('');
   }, [widthCm, heightCm]);
+
+  // Sugerir próximo código especial ESP-001, ESP-002... para diferenciar de QS-xxx
+  const suggestedCustomCode = useMemo(() => {
+    const espNums = products
+      .map((p) => String(p.codigo || p.code || '').toUpperCase())
+      .filter((c) => c.startsWith('ESP-'))
+      .map((c) => parseInt(c.replace('ESP-', ''), 10))
+      .filter((n) => !isNaN(n));
+    const nextNum = espNums.length > 0 ? Math.max(...espNums) + 1 : 1;
+    return `ESP-${String(nextNum).padStart(3, '0')}`;
+  }, [products]);
+
+  const suggestedCustomDesc = useMemo(() => {
+    const w = Number(widthCm) || 0;
+    const h = Number(heightCm) || 0;
+    const extras = [
+      addKnob ? '+ PERILLA' : '',
+      addStarter ? '+ COMBO STARTER' : '',
+    ]
+      .filter(Boolean)
+      .join(' ');
+    return `SELLO A MEDIDA ${w}X${h}CM${extras ? ' ' + extras : ''}`;
+  }, [widthCm, heightCm, addKnob, addStarter]);
+
+  useEffect(() => {
+    setCustomProductCode(suggestedCustomCode);
+  }, [suggestedCustomCode]);
+
+  useEffect(() => {
+    setCustomProductDesc(suggestedCustomDesc);
+  }, [suggestedCustomDesc]);
+
+  // Lista de productos especiales (ESP-*) activos en el catálogo para encontrarlos y eliminarlos rápido
+  const customCatalogProducts = useMemo(() => {
+    return products.filter((p) =>
+      String(p.codigo || p.code || '')
+        .toUpperCase()
+        .startsWith('ESP-')
+    );
+  }, [products]);
 
   // Precios de adicionales leídos desde el catálogo real (con fallback)
   const knobCatalogPrice = useMemo(() => {
@@ -234,6 +285,84 @@ export default function PricingToolsModal({
     }
   };
 
+  // Acción 3: Guardar la cotización actual como un Producto Nuevo en el catálogo (código diferenciado ESP-xxx)
+  const handleCreateCustomProduct = async () => {
+    const code = String(customProductCode || suggestedCustomCode).trim().toUpperCase();
+    const desc = String(customProductDesc || suggestedCustomDesc).trim().toUpperCase();
+    const unitPrice = Number(quoteResult.unitTotal || 0);
+
+    if (!code || !desc) {
+      setStatusMsg({ type: 'error', text: 'Completá el código y la descripción del producto.' });
+      return;
+    }
+    if (unitPrice <= 0) {
+      setStatusMsg({ type: 'error', text: 'El precio unitario debe ser mayor a 0.' });
+      return;
+    }
+
+    setSavingCustomProduct(true);
+    setStatusMsg(null);
+    try {
+      // Buscar categoría de Sellos existente o usar 'Sellos'
+      const defaultCat =
+        products.find((p) => /sello/i.test(p.categoria || ''))?.categoria || 'Sellos';
+
+      const payload = {
+        codigo: code,
+        descripcion: desc,
+        precio: unitPrice,
+        categoria: defaultCat,
+        data: `${Number(widthCm) || 0}x${Number(heightCm) || 0}cm`,
+        img: '',
+        activo: 1,
+        franquicia_id: 1,
+      };
+
+      const { error } = await supabase.from(tableName).insert(payload);
+      if (error) throw error;
+
+      setStatusMsg({
+        type: 'success',
+        text: `Producto "${code} — ${desc}" ($${unitPrice.toLocaleString('es-AR')}) guardado en el catálogo.`,
+      });
+      if (onProductsUpdated) await onProductsUpdated();
+    } catch (err) {
+      setStatusMsg({
+        type: 'error',
+        text: `Error al guardar producto a medida: ${err.message}`,
+      });
+    } finally {
+      setSavingCustomProduct(false);
+    }
+  };
+
+  // Acción 4: Eliminar rápido un producto a medida (ESP-*) desde el mismo cotizador
+  const handleDeleteCustomProduct = async (prod) => {
+    const code = prod.codigo || prod.code;
+    const desc = prod.descripcion || prod.name;
+    if (!window.confirm(`¿Eliminar el producto a medida "${code} — ${desc}" del catálogo?`)) {
+      return;
+    }
+    setSavingCustomProduct(true);
+    setStatusMsg(null);
+    try {
+      const { error } = await supabase.from(tableName).delete().eq('id', prod.id);
+      if (error) throw error;
+      setStatusMsg({
+        type: 'success',
+        text: `Producto a medida "${code}" eliminado del catálogo.`,
+      });
+      if (onProductsUpdated) await onProductsUpdated();
+    } catch (err) {
+      setStatusMsg({
+        type: 'error',
+        text: `Error al eliminar producto: ${err.message}`,
+      });
+    } finally {
+      setSavingCustomProduct(false);
+    }
+  };
+
   return (
     <>
       {/* Botones de barra superior integrados con la estética de ProductManager */}
@@ -266,6 +395,30 @@ export default function PricingToolsModal({
             <span style={styles.badgeAlert}>{audit.anomalies.length}</span>
           )}
         </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setStatusMsg(null);
+            setActiveTab('pdf');
+            setIsOpen(true);
+          }}
+          style={styles.btnSecondary}
+        >
+          <LinearIcon name="file-text" color="#495D56" size={18} />
+          <span>Lista PDF / Reventa</span>
+        </button>
+
+        <a
+          href="/catalogo"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ ...styles.btnSecondary, textDecoration: 'none' }}
+          title="Abrir página pública del catálogo con filtros por empaque"
+        >
+          <LinearIcon name="external-link" color="#495D56" size={17} />
+          <span>Catálogo Web</span>
+        </a>
       </div>
 
       {isOpen && (
@@ -337,6 +490,22 @@ export default function PricingToolsModal({
                   size={16}
                 />
                 <span>Ajuste Masivo</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setStatusMsg(null);
+                  setActiveTab('pdf');
+                }}
+                style={activeTab === 'pdf' ? styles.tabActive : styles.tab}
+              >
+                <LinearIcon
+                  name="file-text"
+                  color={activeTab === 'pdf' ? '#FFFFFF' : '#495D56'}
+                  size={16}
+                />
+                <span>Lista PDF / Reventa</span>
               </button>
             </div>
 
@@ -511,6 +680,191 @@ export default function PricingToolsModal({
                       style={{ width: '100%', marginTop: '8px', accentColor: '#495D56' }}
                     />
                   </div>
+                </div>
+
+                {/* Bloque: Guardar cotización como Producto a Medida con código diferenciado (ESP-xxx) */}
+                <div
+                  style={{
+                    marginTop: '16px',
+                    background: '#FFFFFF',
+                    border: '1px solid #DFDED9',
+                    borderRadius: '18px',
+                    padding: '16px',
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      marginBottom: '10px',
+                      gap: '8px',
+                      flexWrap: 'wrap',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <LinearIcon name="package-plus" color="#495D56" size={17} />
+                      <span style={{ fontSize: '13px', fontWeight: 700, color: '#495D56' }}>
+                        Guardar cotización como Producto a Medida
+                      </span>
+                    </div>
+                    <span style={{ fontSize: '11px', color: '#998E55', fontWeight: 600 }}>
+                      Prefijo ESP- para buscarlo y eliminarlo fácil
+                    </span>
+                  </div>
+
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: '120px 1fr auto',
+                      gap: '10px',
+                      alignItems: 'end',
+                    }}
+                  >
+                    <div>
+                      <label style={styles.label}>CÓDIGO</label>
+                      <input
+                        type="text"
+                        value={customProductCode}
+                        onChange={(e) => setCustomProductCode(e.target.value.toUpperCase())}
+                        placeholder="ESP-001"
+                        style={styles.input}
+                      />
+                    </div>
+                    <div>
+                      <label style={styles.label}>DESCRIPCIÓN DEL TRABAJO A MEDIDA</label>
+                      <input
+                        type="text"
+                        value={customProductDesc}
+                        onChange={(e) => setCustomProductDesc(e.target.value.toUpperCase())}
+                        placeholder="SELLO A MEDIDA 9X6CM"
+                        style={styles.input}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      disabled={savingCustomProduct}
+                      onClick={handleCreateCustomProduct}
+                      style={{
+                        ...styles.btnCoral,
+                        padding: '11px 18px',
+                        height: '42px',
+                        opacity: savingCustomProduct ? 0.7 : 1,
+                      }}
+                    >
+                      <LinearIcon name="plus" color="#FFFFFF" size={16} />
+                      <span>
+                        {savingCustomProduct
+                          ? 'Guardando...'
+                          : `Crear ($${quoteResult.unitTotal.toLocaleString('es-AR')})`}
+                      </span>
+                    </button>
+                  </div>
+
+                  {/* Lista rápida de productos ESP-* existentes para eliminarlos con 1 clic */}
+                  {customCatalogProducts.length > 0 && (
+                    <div
+                      style={{
+                        marginTop: '14px',
+                        paddingTop: '12px',
+                        borderTop: '1px solid #F1F5F9',
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: '10px',
+                          fontWeight: 700,
+                          color: '#998E55',
+                          letterSpacing: '0.04em',
+                          marginBottom: '8px',
+                          textTransform: 'uppercase',
+                        }}
+                      >
+                        Trabajos a medida activos en catálogo ({customCatalogProducts.length})
+                      </div>
+                      <div
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '6px',
+                          maxHeight: '140px',
+                          overflowY: 'auto',
+                        }}
+                      >
+                        {customCatalogProducts.map((cp) => (
+                          <div
+                            key={cp.id || cp.codigo}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              gap: '10px',
+                              background: '#FAF9F6',
+                              padding: '7px 12px',
+                              borderRadius: '10px',
+                              border: '1px solid #EFECE6',
+                            }}
+                          >
+                            <div
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                minWidth: 0,
+                                flex: 1,
+                              }}
+                            >
+                              <span
+                                style={{
+                                  background: '#F4F1E1',
+                                  color: '#495D56',
+                                  padding: '2px 8px',
+                                  borderRadius: '8px',
+                                  fontSize: '11px',
+                                  fontWeight: 700,
+                                  flexShrink: 0,
+                                }}
+                              >
+                                {cp.codigo || cp.code}
+                              </span>
+                              <span
+                                style={{
+                                  fontSize: '12px',
+                                  fontWeight: 600,
+                                  color: '#5E7358',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap',
+                                }}
+                              >
+                                {cp.descripcion || cp.name}
+                              </span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+                              <span style={{ fontSize: '12px', fontWeight: 700, color: '#8E1F52' }}>
+                                ${Number(cp.precio ?? cp.price ?? 0).toLocaleString('es-AR')}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteCustomProduct(cp)}
+                                title="Eliminar trabajo a medida del catálogo"
+                                style={{
+                                  background: 'transparent',
+                                  border: 'none',
+                                  cursor: 'pointer',
+                                  padding: '4px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                }}
+                              >
+                                <LinearIcon name="trash-2" color="#991B1B" size={15} />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -723,6 +1077,218 @@ export default function PricingToolsModal({
                     {loading
                       ? 'Actualizando catálogo...'
                       : `Aplicar Nuevos Precios (${targetBulkProducts.length} productos)`}
+                  </span>
+                </button>
+              </div>
+            )}
+
+            {/* PESTAÑA 4: EXPORTAR LISTA COMPLETA EN PDF (PÚBLICO O REVENTA CON DESCUENTO) */}
+            {activeTab === 'pdf' && (
+              <div>
+                <p style={{ fontSize: '13px', color: '#495D56', margin: '0 0 14px 0' }}>
+                  Generá un PDF A4 listo para enviar por WhatsApp o imprimir, con precios al público
+                  o aplicando un descuento comercial para librerías / revendedores:
+                </p>
+
+                {/* Botones rápidos de % de descuento */}
+                <div style={{ marginBottom: '14px' }}>
+                  <label style={styles.label}>DESCUENTO RÁPIDO PARA REVENTA</label>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    {[
+                      { label: '0% (Lista Público)', val: 0 },
+                      { label: '-15% Reventa', val: 15 },
+                      { label: '-20% Reventa', val: 20 },
+                      { label: '-25% Reventa', val: 25 },
+                      { label: '-30% Mayorista', val: 30 },
+                    ].map((preset) => {
+                      const active = Number(pdfDiscountPct) === preset.val;
+                      return (
+                        <button
+                          key={preset.val}
+                          type="button"
+                          onClick={() => setPdfDiscountPct(preset.val)}
+                          style={{
+                            background: active ? '#FF5E5E' : '#F4F1E1',
+                            color: active ? '#FFFFFF' : '#495D56',
+                            border: 'none',
+                            borderRadius: '14px',
+                            padding: '8px 14px',
+                            fontSize: '12px',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            fontFamily: 'Inter',
+                          }}
+                        >
+                          {preset.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div style={styles.grid3}>
+                  <div>
+                    <label style={styles.label}>DESCUENTO MANUAL (%)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="80"
+                      step="1"
+                      value={pdfDiscountPct}
+                      onChange={(e) => setPdfDiscountPct(e.target.value)}
+                      style={styles.input}
+                    />
+                  </div>
+                  <div>
+                    <label style={styles.label}>REDONDEO REVENTA ($)</label>
+                    <select
+                      value={pdfRoundStep}
+                      onChange={(e) => setPdfRoundStep(Number(e.target.value))}
+                      style={styles.input}
+                    >
+                      <option value={1}>Exacto ($1)</option>
+                      <option value={50}>$ 50 ARS</option>
+                      <option value={100}>$ 100 ARS</option>
+                      <option value={500}>$ 500 ARS</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={styles.label}>TÍTULO PERSONALIZADO (OPCIONAL)</label>
+                    <input
+                      type="text"
+                      value={pdfCustomTitle}
+                      onChange={(e) => setPdfCustomTitle(e.target.value)}
+                      placeholder={
+                        Number(pdfDiscountPct) > 0
+                          ? `LISTA REVENTA (-${pdfDiscountPct}%)`
+                          : 'LISTA DE PRECIOS OFICIAL'
+                      }
+                      style={styles.input}
+                    />
+                  </div>
+                </div>
+
+                <div style={styles.checksRow}>
+                  {Number(pdfDiscountPct) > 0 && (
+                    <label style={styles.checkLabel}>
+                      <input
+                        type="checkbox"
+                        checked={pdfShowComparison}
+                        onChange={(e) => setPdfShowComparison(e.target.checked)}
+                      />
+                      <span>Mostrar columna Precio Público junto al de Reventa</span>
+                    </label>
+                  )}
+                  <label style={styles.checkLabel}>
+                    <input
+                      type="checkbox"
+                      checked={pdfIncludeEsp}
+                      onChange={(e) => setPdfIncludeEsp(e.target.checked)}
+                    />
+                    <span>Incluir trabajos a medida (códigos ESP-*)</span>
+                  </label>
+                </div>
+
+                {/* Vista previa rápida de precios para el PDF */}
+                <div style={styles.previewBox}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      marginBottom: '10px',
+                    }}
+                  >
+                    <span style={{ fontSize: '11px', fontWeight: 700, color: '#998E55' }}>
+                      VISTA PREVIA DEL PDF (
+                      {Number(pdfDiscountPct) > 0
+                        ? `CON ${pdfDiscountPct}% DE DESCUENTO REVENTA`
+                        : 'LISTA OFICIAL AL PÚBLICO'}
+                      )
+                    </span>
+                  </div>
+
+                  <div style={{ maxHeight: '200px', overflowY: 'auto', paddingRight: '4px' }}>
+                    {products
+                      .filter((p) => {
+                        const code = String(p.codigo || p.code || '').toUpperCase();
+                        if (Number(p.activo ?? 1) === 0) return false;
+                        if (!pdfIncludeEsp && code.startsWith('ESP-')) return false;
+                        return true;
+                      })
+                      .map((p) => {
+                        const code = p.codigo || p.code;
+                        const name = p.descripcion || p.name;
+                        const pubPrice = Number(p.precio ?? p.price ?? 0);
+                        const pct = Math.max(0, Number(pdfDiscountPct) || 0);
+                        const rawResale = pubPrice * (1 - pct / 100);
+                        const resalePrice =
+                          pct > 0
+                            ? pdfRoundStep > 1
+                              ? roundCommercial(rawResale, pdfRoundStep)
+                              : Math.round(rawResale)
+                            : pubPrice;
+
+                        return (
+                          <div key={code} style={styles.previewRow}>
+                            <div style={{ flex: 1, paddingRight: '8px' }}>
+                              <span
+                                style={{ fontWeight: 700, color: '#5E7358', marginRight: '6px' }}
+                              >
+                                {code}
+                              </span>
+                              <span style={{ color: '#495D56' }}>{name}</span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              {pct > 0 && (
+                                <span
+                                  style={{
+                                    fontSize: '12px',
+                                    color: '#94A3B8',
+                                    textDecoration: 'line-through',
+                                  }}
+                                >
+                                  ${pubPrice.toLocaleString('es-AR')}
+                                </span>
+                              )}
+                              <span
+                                style={{ fontWeight: 700, fontSize: '13px', color: '#8E1F52' }}
+                              >
+                                ${resalePrice.toLocaleString('es-AR')}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    generatePriceListPDF(products, {
+                      discountPct: Number(pdfDiscountPct) || 0,
+                      roundStep: pdfRoundStep,
+                      onlyActive: true,
+                      includeCustomEsp: pdfIncludeEsp,
+                      showPublicComparison: pdfShowComparison,
+                      customTitle: pdfCustomTitle,
+                    });
+                    setStatusMsg({
+                      type: 'success',
+                      text:
+                        Number(pdfDiscountPct) > 0
+                          ? `PDF de Lista Reventa (-${pdfDiscountPct}%) descargado correctamente.`
+                          : 'PDF de Lista Oficial descargado correctamente.',
+                    });
+                  }}
+                  style={{ ...styles.btnCoral, width: '100%', marginTop: '14px' }}
+                >
+                  <LinearIcon name="download" color="#FFFFFF" size={18} />
+                  <span>
+                    {Number(pdfDiscountPct) > 0
+                      ? `Descargar PDF Lista Reventa (-${pdfDiscountPct}% OFF)`
+                      : 'Descargar PDF Lista Oficial Completa'}
                   </span>
                 </button>
               </div>

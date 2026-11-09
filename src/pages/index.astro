@@ -37,6 +37,19 @@ try {
 		
 		<OrderStatusCard />
 
+		<div class="w-full max-w-[390px] mx-auto px-4 mt-2 mb-3">
+			<a
+				href="/catalogo"
+				class="w-full flex items-center justify-between px-4 py-2.5 rounded-2xl bg-[#F4F1E1] border border-[#495D56]/25 shadow-sm hover:border-[#FF5E5E] transition-all no-underline group"
+			>
+				<div class="text-left">
+					<span class="block text-[9px] font-black uppercase tracking-widest text-[#FF5E5E]">Guía interactiva por uso</span>
+					<span class="block text-[12px] font-black text-[#495D56] group-hover:text-[#055B5C]">Ver catálogo completo por tipo de empaque</span>
+				</div>
+				<span class="w-7 h-7 rounded-xl bg-[#495D56] group-hover:bg-[#FF5E5E] text-white flex items-center justify-center text-xs font-black transition-colors shrink-0">→</span>
+			</a>
+		</div>
+
 		<!-- CARRUSELES DINÁMICOS (cargados en cliente, siempre frescos) -->
 		<div id="products-section" class="w-full overflow-hidden flex flex-col items-center">
 			<SlidersLoader client:load />

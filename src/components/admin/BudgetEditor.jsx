@@ -130,6 +130,54 @@ const BudgetEditor = ({ editingOrder, onSave, onCancel }) => {
     setCustomPriceOverride("");
   };
 
+  const handleGuardarProdEspecialYAgregar = async () => {
+    const finalUnitPrice =
+      customPriceOverride !== "" && !isNaN(Number(customPriceOverride))
+        ? Number(customPriceOverride)
+        : customQuotePreview.unitPrice;
+
+    const espNums = catalogo
+      .map((p) => String(p.codigo || "").toUpperCase())
+      .filter((c) => c.startsWith("ESP-"))
+      .map((c) => parseInt(c.replace("ESP-", ""), 10))
+      .filter((n) => !isNaN(n));
+    const nextNum = espNums.length > 0 ? Math.max(...espNums) + 1 : 1;
+    const nextCode = `ESP-${String(nextNum).padStart(3, "0")}`;
+    const desc = `SELLO A MEDIDA ${customWidth}X${customHeight}CM`;
+    const defaultCat = catalogo.find((p) => /sello/i.test(p.categoria || ""))?.categoria || "Sellos";
+
+    const { data, error } = await supabase
+      .from("productos")
+      .insert({
+        codigo: nextCode,
+        descripcion: desc,
+        precio: finalUnitPrice,
+        categoria: defaultCat,
+        data: `${customWidth}x${customHeight}cm`,
+        img: "",
+        activo: 1,
+        franquicia_id: FRANQUICIA_ID,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      alert("Error guardando producto a medida: " + error.message);
+      return;
+    }
+
+    if (data) {
+      setCatalogo((prev) => [...prev, data]);
+    }
+
+    agregarAlCarrito({
+      descripcion: desc,
+      precio: finalUnitPrice,
+    });
+    setShowCustomQuoter(false);
+    setCustomPriceOverride("");
+  };
+
   const handleRequoteToCurrentCatalog = () => {
     if (carrito.length === 0) return;
     const result = requoteBudgetItems(carrito, catalogo);
@@ -268,28 +316,49 @@ const BudgetEditor = ({ editingOrder, onSave, onCancel }) => {
                 />
               </div>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
               <span style={{ fontSize: '11px', color: '#495D56' }}>
                 {customQuotePreview.ruleApplied}
               </span>
-              <button
-                type="button"
-                onClick={handleAgregarMedidaEspecial}
-                style={{
-                  background: '#FF5E5E',
-                  color: '#FFFFFF',
-                  border: 'none',
-                  borderRadius: '10px',
-                  padding: '6px 12px',
-                  fontSize: '11px',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  fontFamily: 'Inter',
-                  flexShrink: 0,
-                }}
-              >
-                + Agregar al pedido
-              </button>
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  onClick={handleGuardarProdEspecialYAgregar}
+                  title="Crea el producto en el catálogo con código ESP-xxx y lo suma al pedido"
+                  style={{
+                    background: '#F4F1E1',
+                    color: '#495D56',
+                    border: 'none',
+                    borderRadius: '10px',
+                    padding: '6px 10px',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    fontFamily: 'Inter',
+                    flexShrink: 0,
+                  }}
+                >
+                  + Crear prod. ESP- y agregar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleAgregarMedidaEspecial}
+                  style={{
+                    background: '#FF5E5E',
+                    color: '#FFFFFF',
+                    border: 'none',
+                    borderRadius: '10px',
+                    padding: '6px 12px',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    fontFamily: 'Inter',
+                    flexShrink: 0,
+                  }}
+                >
+                  + Agregar al pedido
+                </button>
+              </div>
             </div>
           </div>
         )}

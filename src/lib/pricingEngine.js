@@ -68,6 +68,23 @@ export function parseStampDimensions(product) {
 }
 
 /**
+ * Extrae dimensiones directamente desde un string de descripción o un objeto producto,
+ * devolviendo { width, height, sumSides, areaCm2 } o null.
+ */
+export function parseDimensionsFromText(textOrProduct) {
+  const prodObj =
+    typeof textOrProduct === 'string' ? { descripcion: textOrProduct } : textOrProduct || {};
+  const dims = parseStampDimensions(prodObj);
+  if (!dims) return null;
+  return {
+    width: dims.width,
+    height: dims.height,
+    sumSides: Number((dims.width + dims.height).toFixed(2)),
+    areaCm2: Number((dims.width * dims.height).toFixed(2)),
+  };
+}
+
+/**
  * Cotiza cualquier medida de sello (Ancho x Alto en cm) usando los productos cargados desde Supabase.
  * Regla: Suma de Lados (L + A) interpolada entre los cuadrados oficiales de Queselló!
  */
