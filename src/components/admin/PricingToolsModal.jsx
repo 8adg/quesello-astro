@@ -55,6 +55,7 @@ export default function PricingToolsModal({
   const [pdfShowComparison, setPdfShowComparison] = useState(true);
   const [pdfIncludeEsp, setPdfIncludeEsp] = useState(false);
   const [pdfCustomTitle, setPdfCustomTitle] = useState('');
+  const [showPdfPreview, setShowPdfPreview] = useState(false);
 
   // Auditoría automática de la curva actual en Supabase
   const audit = useMemo(() => auditCatalogAnomalies(products), [products]);
@@ -685,11 +686,11 @@ export default function PricingToolsModal({
                 {/* Bloque: Guardar cotización como Producto a Medida con código diferenciado (ESP-xxx) */}
                 <div
                   style={{
-                    marginTop: '16px',
+                    marginTop: '18px',
                     background: '#FFFFFF',
                     border: '1px solid #DFDED9',
-                    borderRadius: '18px',
-                    padding: '16px',
+                    borderRadius: '22px',
+                    padding: '20px',
                   }}
                 >
                   <div
@@ -697,18 +698,27 @@ export default function PricingToolsModal({
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
-                      marginBottom: '10px',
+                      marginBottom: '14px',
                       gap: '8px',
                       flexWrap: 'wrap',
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <LinearIcon name="package-plus" color="#495D56" size={17} />
-                      <span style={{ fontSize: '13px', fontWeight: 700, color: '#495D56' }}>
+                      <LinearIcon name="package-plus" color="#495D56" size={18} />
+                      <span style={{ fontSize: '14px', fontWeight: 800, color: '#495D56' }}>
                         Guardar cotización como Producto a Medida
                       </span>
                     </div>
-                    <span style={{ fontSize: '11px', color: '#998E55', fontWeight: 600 }}>
+                    <span
+                      style={{
+                        fontSize: '11px',
+                        color: '#998E55',
+                        fontWeight: 700,
+                        background: '#F4F1E1',
+                        padding: '4px 10px',
+                        borderRadius: '999px',
+                      }}
+                    >
                       Prefijo ESP- para buscarlo y eliminarlo fácil
                     </span>
                   </div>
@@ -716,19 +726,19 @@ export default function PricingToolsModal({
                   <div
                     style={{
                       display: 'grid',
-                      gridTemplateColumns: '120px 1fr auto',
-                      gap: '10px',
-                      alignItems: 'end',
+                      gridTemplateColumns: '150px 1fr',
+                      gap: '12px',
+                      marginBottom: '14px',
                     }}
                   >
                     <div>
-                      <label style={styles.label}>CÓDIGO</label>
+                      <label style={styles.label}>CÓDIGO DIFERENCIADO</label>
                       <input
                         type="text"
                         value={customProductCode}
                         onChange={(e) => setCustomProductCode(e.target.value.toUpperCase())}
                         placeholder="ESP-001"
-                        style={styles.input}
+                        style={{ ...styles.input, fontWeight: 700 }}
                       />
                     </div>
                     <div>
@@ -741,42 +751,42 @@ export default function PricingToolsModal({
                         style={styles.input}
                       />
                     </div>
-                    <button
-                      type="button"
-                      disabled={savingCustomProduct}
-                      onClick={handleCreateCustomProduct}
-                      style={{
-                        ...styles.btnCoral,
-                        padding: '11px 18px',
-                        height: '42px',
-                        opacity: savingCustomProduct ? 0.7 : 1,
-                      }}
-                    >
-                      <LinearIcon name="plus" color="#FFFFFF" size={16} />
-                      <span>
-                        {savingCustomProduct
-                          ? 'Guardando...'
-                          : `Crear ($${quoteResult.unitTotal.toLocaleString('es-AR')})`}
-                      </span>
-                    </button>
                   </div>
 
-                  {/* Lista rápida de productos ESP-* existentes para eliminarlos con 1 clic */}
+                  <button
+                    type="button"
+                    disabled={savingCustomProduct}
+                    onClick={handleCreateCustomProduct}
+                    style={{
+                      ...styles.btnPrimary,
+                      width: '100%',
+                      opacity: savingCustomProduct ? 0.7 : 1,
+                    }}
+                  >
+                    <LinearIcon name="plus-circle" color="#FFFFFF" size={18} />
+                    <span>
+                      {savingCustomProduct
+                        ? 'Guardando en catálogo...'
+                        : `Guardar como Producto a Medida (${customProductCode || suggestedCustomCode} — $${quoteResult.unitTotal.toLocaleString('es-AR')})`}
+                    </span>
+                  </button>
+
+                  {/* Lista rápida de productos ESP-* existentes para eliminarlos con 1 clic (sin scroll interno) */}
                   {customCatalogProducts.length > 0 && (
                     <div
                       style={{
-                        marginTop: '14px',
-                        paddingTop: '12px',
-                        borderTop: '1px solid #F1F5F9',
+                        marginTop: '16px',
+                        paddingTop: '14px',
+                        borderTop: '1px solid #EFECE6',
                       }}
                     >
                       <div
                         style={{
-                          fontSize: '10px',
-                          fontWeight: 700,
+                          fontSize: '11px',
+                          fontWeight: 800,
                           color: '#998E55',
                           letterSpacing: '0.04em',
-                          marginBottom: '8px',
+                          marginBottom: '10px',
                           textTransform: 'uppercase',
                         }}
                       >
@@ -786,9 +796,7 @@ export default function PricingToolsModal({
                         style={{
                           display: 'flex',
                           flexDirection: 'column',
-                          gap: '6px',
-                          maxHeight: '140px',
-                          overflowY: 'auto',
+                          gap: '8px',
                         }}
                       >
                         {customCatalogProducts.map((cp) => (
@@ -798,27 +806,27 @@ export default function PricingToolsModal({
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'space-between',
-                              gap: '10px',
+                              gap: '12px',
                               background: '#FAF9F6',
-                              padding: '7px 12px',
-                              borderRadius: '10px',
-                              border: '1px solid #EFECE6',
+                              padding: '10px 14px',
+                              borderRadius: '14px',
+                              border: '1px solid #E5E0D0',
                             }}
                           >
                             <div
                               style={{
                                 display: 'flex',
                                 alignItems: 'center',
-                                gap: '8px',
+                                gap: '10px',
                                 minWidth: 0,
                                 flex: 1,
                               }}
                             >
                               <span
                                 style={{
-                                  background: '#F4F1E1',
-                                  color: '#495D56',
-                                  padding: '2px 8px',
+                                  background: '#495D56',
+                                  color: '#FFFFFF',
+                                  padding: '4px 10px',
                                   borderRadius: '8px',
                                   fontSize: '11px',
                                   fontWeight: 700,
@@ -829,9 +837,9 @@ export default function PricingToolsModal({
                               </span>
                               <span
                                 style={{
-                                  fontSize: '12px',
-                                  fontWeight: 600,
-                                  color: '#5E7358',
+                                  fontSize: '13px',
+                                  fontWeight: 700,
+                                  color: '#495D56',
                                   overflow: 'hidden',
                                   textOverflow: 'ellipsis',
                                   whiteSpace: 'nowrap',
@@ -840,24 +848,25 @@ export default function PricingToolsModal({
                                 {cp.descripcion || cp.name}
                               </span>
                             </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
-                              <span style={{ fontSize: '12px', fontWeight: 700, color: '#8E1F52' }}>
+                            <div
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '12px',
+                                flexShrink: 0,
+                              }}
+                            >
+                              <span style={{ fontSize: '13px', fontWeight: 800, color: '#8E1F52' }}>
                                 ${Number(cp.precio ?? cp.price ?? 0).toLocaleString('es-AR')}
                               </span>
                               <button
                                 type="button"
                                 onClick={() => handleDeleteCustomProduct(cp)}
                                 title="Eliminar trabajo a medida del catálogo"
-                                style={{
-                                  background: 'transparent',
-                                  border: 'none',
-                                  cursor: 'pointer',
-                                  padding: '4px',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                }}
+                                style={styles.btnDangerPill}
                               >
-                                <LinearIcon name="trash-2" color="#991B1B" size={15} />
+                                <LinearIcon name="trash-2" color="#991B1B" size={14} />
+                                <span>Eliminar</span>
                               </button>
                             </div>
                           </div>
@@ -1006,7 +1015,21 @@ export default function PricingToolsModal({
                   </div>
                 </div>
 
-                {/* Lista completa editable antes de impactar en base de datos */}
+                <button
+                  type="button"
+                  disabled={loading}
+                  onClick={handleApplyBulkAdjustment}
+                  style={{ ...styles.btnPrimary, width: '100%', marginTop: '16px' }}
+                >
+                  <LinearIcon name="check" color="#FFFFFF" size={18} />
+                  <span>
+                    {loading
+                      ? 'Actualizando catálogo...'
+                      : `Aplicar Nuevos Precios (${targetBulkProducts.length} productos)`}
+                  </span>
+                </button>
+
+                {/* Lista completa editable antes de impactar en base de datos (sin doble scroll interno) */}
                 <div style={styles.previewBox}>
                   <div
                     style={{
@@ -1014,17 +1037,19 @@ export default function PricingToolsModal({
                       justifyContent: 'space-between',
                       alignItems: 'center',
                       marginBottom: '10px',
+                      flexWrap: 'wrap',
+                      gap: '6px',
                     }}
                   >
                     <span style={{ fontSize: '11px', fontWeight: 700, color: '#998E55' }}>
                       PREVISUALIZACIÓN EDITABLE ({targetBulkProducts.length} PRODUCTOS)
                     </span>
                     <span style={{ fontSize: '11px', color: '#64748B' }}>
-                      Podés retocar cualquier monto manualmente
+                      Podés retocar cualquier monto manualmente antes de aplicar
                     </span>
                   </div>
 
-                  <div style={{ maxHeight: '230px', overflowY: 'auto', paddingRight: '4px' }}>
+                  <div>
                     {targetBulkProducts.map((p) => (
                       <div key={p.code} style={styles.previewRow}>
                         <div style={{ flex: 1, paddingRight: '8px' }}>
@@ -1049,7 +1074,7 @@ export default function PricingToolsModal({
                               }))
                             }
                             style={{
-                              width: '105px',
+                              width: '110px',
                               padding: '6px 10px',
                               borderRadius: '10px',
                               border: '1px solid #DFDED9',
@@ -1065,232 +1090,242 @@ export default function PricingToolsModal({
                     ))}
                   </div>
                 </div>
-
-                <button
-                  type="button"
-                  disabled={loading}
-                  onClick={handleApplyBulkAdjustment}
-                  style={{ ...styles.btnPrimary, width: '100%', marginTop: '14px' }}
-                >
-                  <LinearIcon name="check" color="#FFFFFF" size={18} />
-                  <span>
-                    {loading
-                      ? 'Actualizando catálogo...'
-                      : `Aplicar Nuevos Precios (${targetBulkProducts.length} productos)`}
-                  </span>
-                </button>
               </div>
             )}
 
             {/* PESTAÑA 4: EXPORTAR LISTA COMPLETA EN PDF (PÚBLICO O REVENTA CON DESCUENTO) */}
             {activeTab === 'pdf' && (
               <div>
-                <p style={{ fontSize: '13px', color: '#495D56', margin: '0 0 14px 0' }}>
+                <p style={{ fontSize: '13px', color: '#495D56', margin: '0 0 16px 0' }}>
                   Generá un PDF A4 listo para enviar por WhatsApp o imprimir, con precios al público
                   o aplicando un descuento comercial para librerías / revendedores:
                 </p>
 
                 {/* Botones rápidos de % de descuento */}
-                <div style={{ marginBottom: '14px' }}>
-                  <label style={styles.label}>DESCUENTO RÁPIDO PARA REVENTA</label>
-                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                    {[
-                      { label: '0% (Lista Público)', val: 0 },
-                      { label: '-15% Reventa', val: 15 },
-                      { label: '-20% Reventa', val: 20 },
-                      { label: '-25% Reventa', val: 25 },
-                      { label: '-30% Mayorista', val: 30 },
-                    ].map((preset) => {
-                      const active = Number(pdfDiscountPct) === preset.val;
-                      return (
-                        <button
-                          key={preset.val}
-                          type="button"
-                          onClick={() => setPdfDiscountPct(preset.val)}
-                          style={{
-                            background: active ? '#FF5E5E' : '#F4F1E1',
-                            color: active ? '#FFFFFF' : '#495D56',
-                            border: 'none',
-                            borderRadius: '14px',
-                            padding: '8px 14px',
-                            fontSize: '12px',
-                            fontWeight: 700,
-                            cursor: 'pointer',
-                            fontFamily: 'Inter',
-                          }}
-                        >
-                          {preset.label}
-                        </button>
-                      );
-                    })}
+                <div
+                  style={{
+                    background: '#FFFFFF',
+                    borderRadius: '20px',
+                    padding: '18px',
+                    border: '1px solid #DFDED9',
+                  }}
+                >
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={styles.label}>SELECCIONAR TIPO DE LISTA / DESCUENTO</label>
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                      {[
+                        { label: '0% (Lista Público)', val: 0 },
+                        { label: '-15% Reventa', val: 15 },
+                        { label: '-20% Reventa', val: 20 },
+                        { label: '-25% Reventa', val: 25 },
+                        { label: '-30% Mayorista', val: 30 },
+                      ].map((preset) => {
+                        const active = Number(pdfDiscountPct) === preset.val;
+                        return (
+                          <button
+                            key={preset.val}
+                            type="button"
+                            onClick={() => setPdfDiscountPct(preset.val)}
+                            style={{
+                              background: active ? '#495D56' : '#F4F1E1',
+                              color: active ? '#FFFFFF' : '#495D56',
+                              border: active ? '2px solid #495D56' : '2px solid transparent',
+                              borderRadius: '14px',
+                              padding: '9px 15px',
+                              fontSize: '12px',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              fontFamily: 'Inter',
+                            }}
+                          >
+                            {preset.label}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
 
-                <div style={styles.grid3}>
-                  <div>
-                    <label style={styles.label}>DESCUENTO MANUAL (%)</label>
-                    <input
-                      type="number"
-                      min="0"
-                      max="80"
-                      step="1"
-                      value={pdfDiscountPct}
-                      onChange={(e) => setPdfDiscountPct(e.target.value)}
-                      style={styles.input}
-                    />
+                  <div style={styles.grid2}>
+                    <div>
+                      <label style={styles.label}>DESCUENTO MANUAL (%)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="80"
+                        step="1"
+                        value={pdfDiscountPct}
+                        onChange={(e) => setPdfDiscountPct(e.target.value)}
+                        style={styles.input}
+                      />
+                    </div>
+                    <div>
+                      <label style={styles.label}>REDONDEO DE PRECIOS ($)</label>
+                      <select
+                        value={pdfRoundStep}
+                        onChange={(e) => setPdfRoundStep(Number(e.target.value))}
+                        style={styles.input}
+                      >
+                        <option value={1}>Exacto ($1)</option>
+                        <option value={50}>$ 50 ARS</option>
+                        <option value={100}>$ 100 ARS</option>
+                        <option value={500}>$ 500 ARS</option>
+                      </select>
+                    </div>
                   </div>
-                  <div>
-                    <label style={styles.label}>REDONDEO REVENTA ($)</label>
-                    <select
-                      value={pdfRoundStep}
-                      onChange={(e) => setPdfRoundStep(Number(e.target.value))}
-                      style={styles.input}
-                    >
-                      <option value={1}>Exacto ($1)</option>
-                      <option value={50}>$ 50 ARS</option>
-                      <option value={100}>$ 100 ARS</option>
-                      <option value={500}>$ 500 ARS</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label style={styles.label}>TÍTULO PERSONALIZADO (OPCIONAL)</label>
+
+                  <div style={{ marginTop: '12px' }}>
+                    <label style={styles.label}>TÍTULO DEL ENCABEZADO EN EL PDF (OPCIONAL)</label>
                     <input
                       type="text"
                       value={pdfCustomTitle}
                       onChange={(e) => setPdfCustomTitle(e.target.value)}
                       placeholder={
                         Number(pdfDiscountPct) > 0
-                          ? `LISTA REVENTA (-${pdfDiscountPct}%)`
+                          ? `LISTA DE PRECIOS REVENTA (-${pdfDiscountPct}% OFF)`
                           : 'LISTA DE PRECIOS OFICIAL'
                       }
                       style={styles.input}
                     />
                   </div>
-                </div>
 
-                <div style={styles.checksRow}>
-                  {Number(pdfDiscountPct) > 0 && (
+                  <div style={{ ...styles.checksRow, marginTop: '14px' }}>
+                    {Number(pdfDiscountPct) > 0 && (
+                      <label style={styles.checkLabel}>
+                        <input
+                          type="checkbox"
+                          checked={pdfShowComparison}
+                          onChange={(e) => setPdfShowComparison(e.target.checked)}
+                        />
+                        <span>Mostrar columna Precio Público junto al de Reventa</span>
+                      </label>
+                    )}
                     <label style={styles.checkLabel}>
                       <input
                         type="checkbox"
-                        checked={pdfShowComparison}
-                        onChange={(e) => setPdfShowComparison(e.target.checked)}
+                        checked={pdfIncludeEsp}
+                        onChange={(e) => setPdfIncludeEsp(e.target.checked)}
                       />
-                      <span>Mostrar columna Precio Público junto al de Reventa</span>
+                      <span>Incluir trabajos a medida (códigos ESP-*)</span>
                     </label>
-                  )}
-                  <label style={styles.checkLabel}>
-                    <input
-                      type="checkbox"
-                      checked={pdfIncludeEsp}
-                      onChange={(e) => setPdfIncludeEsp(e.target.checked)}
-                    />
-                    <span>Incluir trabajos a medida (códigos ESP-*)</span>
-                  </label>
+                  </div>
+
+                  {/* Botón principal de descarga bien visible y destacado */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      generatePriceListPDF(products, {
+                        discountPct: Number(pdfDiscountPct) || 0,
+                        roundStep: pdfRoundStep,
+                        onlyActive: true,
+                        includeCustomEsp: pdfIncludeEsp,
+                        showPublicComparison: pdfShowComparison,
+                        customTitle: pdfCustomTitle,
+                      });
+                      setStatusMsg({
+                        type: 'success',
+                        text:
+                          Number(pdfDiscountPct) > 0
+                            ? `PDF de Lista Reventa (-${pdfDiscountPct}%) descargado correctamente.`
+                            : 'PDF de Lista Oficial descargado correctamente.',
+                      });
+                    }}
+                    style={{ ...styles.btnPrimary, width: '100%', marginTop: '18px' }}
+                  >
+                    <LinearIcon name="download" color="#FFFFFF" size={18} />
+                    <span>
+                      {Number(pdfDiscountPct) > 0
+                        ? `Descargar PDF Lista Reventa (-${pdfDiscountPct}% OFF)`
+                        : 'Descargar PDF Lista Oficial Completa'}
+                    </span>
+                  </button>
                 </div>
 
-                {/* Vista previa rápida de precios para el PDF */}
-                <div style={styles.previewBox}>
-                  <div
+                {/* Botón para desplegar/ocultar Vista Previa sin generar doble barra de scroll */}
+                <div style={{ marginTop: '14px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowPdfPreview((v) => !v)}
                     style={{
-                      display: 'flex',
+                      ...styles.btnSecondary,
+                      width: '100%',
                       justifyContent: 'space-between',
-                      alignItems: 'center',
-                      marginBottom: '10px',
+                      padding: '12px 18px',
+                      borderRadius: '16px',
+                      border: '1px solid #DFDED9',
                     }}
                   >
-                    <span style={{ fontSize: '11px', fontWeight: 700, color: '#998E55' }}>
-                      VISTA PREVIA DEL PDF (
-                      {Number(pdfDiscountPct) > 0
-                        ? `CON ${pdfDiscountPct}% DE DESCUENTO REVENTA`
-                        : 'LISTA OFICIAL AL PÚBLICO'}
-                      )
+                    <span style={{ fontWeight: 700, fontSize: '12px', color: '#495D56' }}>
+                      {showPdfPreview
+                        ? 'Ocultar vista previa de precios en pantalla'
+                        : `Ver vista previa de precios en pantalla (${
+                            Number(pdfDiscountPct) > 0
+                              ? `con -${pdfDiscountPct}% aplicado`
+                              : 'Lista Público'
+                          })`}
                     </span>
-                  </div>
+                    <LinearIcon
+                      name={showPdfPreview ? 'chevron-up' : 'chevron-down'}
+                      color="#495D56"
+                      size={16}
+                    />
+                  </button>
 
-                  <div style={{ maxHeight: '200px', overflowY: 'auto', paddingRight: '4px' }}>
-                    {products
-                      .filter((p) => {
-                        const code = String(p.codigo || p.code || '').toUpperCase();
-                        if (Number(p.activo ?? 1) === 0) return false;
-                        if (!pdfIncludeEsp && code.startsWith('ESP-')) return false;
-                        return true;
-                      })
-                      .map((p) => {
-                        const code = p.codigo || p.code;
-                        const name = p.descripcion || p.name;
-                        const pubPrice = Number(p.precio ?? p.price ?? 0);
-                        const pct = Math.max(0, Number(pdfDiscountPct) || 0);
-                        const rawResale = pubPrice * (1 - pct / 100);
-                        const resalePrice =
-                          pct > 0
-                            ? pdfRoundStep > 1
-                              ? roundCommercial(rawResale, pdfRoundStep)
-                              : Math.round(rawResale)
-                            : pubPrice;
+                  {showPdfPreview && (
+                    <div style={styles.previewBox}>
+                      {products
+                        .filter((p) => {
+                          const code = String(p.codigo || p.code || '').toUpperCase();
+                          if (Number(p.activo ?? 1) === 0) return false;
+                          if (!pdfIncludeEsp && code.startsWith('ESP-')) return false;
+                          return true;
+                        })
+                        .map((p) => {
+                          const code = p.codigo || p.code;
+                          const name = p.descripcion || p.name;
+                          const pubPrice = Number(p.precio ?? p.price ?? 0);
+                          const pct = Math.max(0, Number(pdfDiscountPct) || 0);
+                          const rawResale = pubPrice * (1 - pct / 100);
+                          const resalePrice =
+                            pct > 0
+                              ? pdfRoundStep > 1
+                                ? roundCommercial(rawResale, pdfRoundStep)
+                                : Math.round(rawResale)
+                              : pubPrice;
 
-                        return (
-                          <div key={code} style={styles.previewRow}>
-                            <div style={{ flex: 1, paddingRight: '8px' }}>
-                              <span
-                                style={{ fontWeight: 700, color: '#5E7358', marginRight: '6px' }}
-                              >
-                                {code}
-                              </span>
-                              <span style={{ color: '#495D56' }}>{name}</span>
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                              {pct > 0 && (
+                          return (
+                            <div key={code} style={styles.previewRow}>
+                              <div style={{ flex: 1, paddingRight: '8px' }}>
                                 <span
-                                  style={{
-                                    fontSize: '12px',
-                                    color: '#94A3B8',
-                                    textDecoration: 'line-through',
-                                  }}
+                                  style={{ fontWeight: 700, color: '#5E7358', marginRight: '6px' }}
                                 >
-                                  ${pubPrice.toLocaleString('es-AR')}
+                                  {code}
                                 </span>
-                              )}
-                              <span
-                                style={{ fontWeight: 700, fontSize: '13px', color: '#8E1F52' }}
-                              >
-                                ${resalePrice.toLocaleString('es-AR')}
-                              </span>
+                                <span style={{ color: '#495D56' }}>{name}</span>
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                {pct > 0 && (
+                                  <span
+                                    style={{
+                                      fontSize: '12px',
+                                      color: '#94A3B8',
+                                      textDecoration: 'line-through',
+                                    }}
+                                  >
+                                    ${pubPrice.toLocaleString('es-AR')}
+                                  </span>
+                                )}
+                                <span
+                                  style={{ fontWeight: 700, fontSize: '13px', color: '#8E1F52' }}
+                                >
+                                  ${resalePrice.toLocaleString('es-AR')}
+                                </span>
+                              </div>
                             </div>
-                          </div>
-                        );
-                      })}
-                  </div>
+                          );
+                        })}
+                    </div>
+                  )}
                 </div>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    generatePriceListPDF(products, {
-                      discountPct: Number(pdfDiscountPct) || 0,
-                      roundStep: pdfRoundStep,
-                      onlyActive: true,
-                      includeCustomEsp: pdfIncludeEsp,
-                      showPublicComparison: pdfShowComparison,
-                      customTitle: pdfCustomTitle,
-                    });
-                    setStatusMsg({
-                      type: 'success',
-                      text:
-                        Number(pdfDiscountPct) > 0
-                          ? `PDF de Lista Reventa (-${pdfDiscountPct}%) descargado correctamente.`
-                          : 'PDF de Lista Oficial descargado correctamente.',
-                    });
-                  }}
-                  style={{ ...styles.btnCoral, width: '100%', marginTop: '14px' }}
-                >
-                  <LinearIcon name="download" color="#FFFFFF" size={18} />
-                  <span>
-                    {Number(pdfDiscountPct) > 0
-                      ? `Descargar PDF Lista Reventa (-${pdfDiscountPct}% OFF)`
-                      : 'Descargar PDF Lista Oficial Completa'}
-                  </span>
-                </button>
               </div>
             )}
           </div>
@@ -1311,9 +1346,9 @@ const styles = {
     background: '#FF5E5E',
     color: '#FFFFFF',
     border: 'none',
-    borderRadius: '20px',
-    padding: '13px 22px',
-    fontWeight: 600,
+    borderRadius: '16px',
+    padding: '14px 22px',
+    fontWeight: 700,
     fontSize: '14px',
     fontFamily: 'Inter, sans-serif',
     cursor: 'pointer',
@@ -1321,6 +1356,7 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'center',
     gap: '8px',
+    boxShadow: '0 4px 14px rgba(255, 94, 94, 0.25)',
   },
   btnSecondary: {
     background: '#F4F1E1',
@@ -1328,13 +1364,27 @@ const styles = {
     border: 'none',
     borderRadius: '20px',
     padding: '12px 20px',
-    fontWeight: 500,
+    fontWeight: 600,
     fontSize: '14px',
     fontFamily: 'Inter, sans-serif',
     cursor: 'pointer',
     display: 'inline-flex',
     alignItems: 'center',
     gap: '8px',
+  },
+  btnDangerPill: {
+    background: '#FEE2E2',
+    color: '#991B1B',
+    border: '1px solid #FECACA',
+    borderRadius: '10px',
+    padding: '6px 12px',
+    fontSize: '12px',
+    fontWeight: 700,
+    fontFamily: 'Inter, sans-serif',
+    cursor: 'pointer',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
   },
   iconActionBtn: {
     background: '#F4F1E1',
@@ -1357,25 +1407,25 @@ const styles = {
   backdrop: {
     position: 'fixed',
     inset: 0,
-    background: 'rgba(75, 59, 40, 0.4)',
+    background: 'rgba(75, 59, 40, 0.45)',
     backdropFilter: 'blur(6px)',
     display: 'flex',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'center',
     zIndex: 9999,
-    padding: '16px',
+    padding: '32px 16px',
+    overflowY: 'auto',
   },
   modal: {
     background: '#FAF9F6',
-    borderRadius: '32px',
-    maxWidth: '580px',
+    borderRadius: '28px',
+    maxWidth: '680px',
     width: '100%',
     padding: '28px',
-    boxShadow: '0 20px 50px rgba(0,0,0,0.14)',
-    border: '1px solid #f0f0f0',
-    maxHeight: '90vh',
-    overflowY: 'auto',
+    boxShadow: '0 20px 50px rgba(0,0,0,0.16)',
+    border: '1px solid #E5E0D0',
     fontFamily: 'Inter, sans-serif',
+    margin: 'auto 0',
   },
   header: {
     display: 'flex',
@@ -1408,9 +1458,9 @@ const styles = {
   },
   tabs: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(3, 1fr)',
+    gridTemplateColumns: 'repeat(4, 1fr)',
     gap: '6px',
-    marginBottom: '18px',
+    marginBottom: '20px',
     background: '#F4F1E1',
     padding: '5px',
     borderRadius: '18px',
@@ -1418,10 +1468,10 @@ const styles = {
   tab: {
     background: 'transparent',
     border: 'none',
-    padding: '10px 12px',
+    padding: '10px 8px',
     borderRadius: '14px',
-    fontSize: '13px',
-    fontWeight: 500,
+    fontSize: '12px',
+    fontWeight: 600,
     color: '#495D56',
     cursor: 'pointer',
     display: 'flex',
@@ -1429,14 +1479,15 @@ const styles = {
     justifyContent: 'center',
     gap: '6px',
     fontFamily: 'Inter, sans-serif',
+    whiteSpace: 'nowrap',
   },
   tabActive: {
     background: '#FF5E5E',
     border: 'none',
-    padding: '10px 12px',
+    padding: '10px 8px',
     borderRadius: '14px',
-    fontSize: '13px',
-    fontWeight: 600,
+    fontSize: '12px',
+    fontWeight: 700,
     color: '#FFFFFF',
     cursor: 'pointer',
     display: 'flex',
@@ -1444,6 +1495,8 @@ const styles = {
     justifyContent: 'center',
     gap: '6px',
     fontFamily: 'Inter, sans-serif',
+    whiteSpace: 'nowrap',
+    boxShadow: '0 2px 8px rgba(255, 94, 94, 0.25)',
   },
   statusBanner: {
     padding: '12px 16px',
@@ -1458,12 +1511,12 @@ const styles = {
   grid3: {
     display: 'grid',
     gridTemplateColumns: 'repeat(3, 1fr)',
-    gap: '10px',
+    gap: '12px',
   },
   grid2: {
     display: 'grid',
     gridTemplateColumns: 'repeat(2, 1fr)',
-    gap: '10px',
+    gap: '12px',
   },
   label: {
     display: 'block',
@@ -1506,8 +1559,8 @@ const styles = {
     padding: '20px',
     marginTop: '16px',
     textAlign: 'center',
-    border: '1px solid #F0F0F0',
-    boxShadow: '0 4px 20px rgba(0,0,0,0.01)',
+    border: '1px solid #DFDED9',
+    boxShadow: '0 4px 20px rgba(0,0,0,0.02)',
   },
   resultMeta: {
     display: 'flex',
@@ -1572,7 +1625,7 @@ const styles = {
     background: '#FFFFFF',
     padding: '14px 18px',
     borderRadius: '20px',
-    border: '1px solid #F0F0F0',
+    border: '1px solid #DFDED9',
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -1582,15 +1635,15 @@ const styles = {
     background: '#FFFFFF',
     borderRadius: '20px',
     padding: '16px',
-    marginTop: '14px',
-    border: '1px solid #F0F0F0',
+    marginTop: '12px',
+    border: '1px solid #DFDED9',
   },
   previewRow: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
     fontSize: '13px',
-    padding: '8px 0',
+    padding: '9px 0',
     borderBottom: '1px solid #F8F7F3',
   },
 };
