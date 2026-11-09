@@ -78,15 +78,99 @@ export default function SlidersLoader() {
 
   return (
     <>
-      {sliders.map((slider, idx) => (
-        <DynamicSlider
-          key={`slider-${idx}`}
-          title={slider.title}
-          subtitle={slider.subtitle}
-          items={slider.items}
-          config={slider.config}
-        />
-      ))}
+      {sliders.map((slider, idx) => {
+        const isStampsSlider =
+          idx === 0 || (slider.title && slider.title.toLowerCase().includes('sello'));
+        const showCatalogLinkAfter =
+          idx === 0 ||
+          (isStampsSlider &&
+            !sliders.slice(0, idx).some((s) => s.title?.toLowerCase().includes('sello')));
+
+        return (
+          <React.Fragment key={`slider-${idx}`}>
+            <DynamicSlider
+              title={slider.title}
+              subtitle={slider.subtitle}
+              items={slider.items}
+              config={slider.config}
+            />
+            {showCatalogLinkAfter && idx === 0 && (
+              <div
+                style={{
+                  width: '100%',
+                  maxWidth: '390px',
+                  margin: '-36px auto 16px auto',
+                  padding: '0 20px',
+                  boxSizing: 'border-box',
+                }}
+              >
+                <a
+                  href="/catalogo"
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '13px 18px',
+                    borderRadius: '20px',
+                    background: '#F4F1E1',
+                    border: '1px solid rgba(73, 93, 86, 0.25)',
+                    boxShadow: '0 2px 10px rgba(0,0,0,0.04)',
+                    textDecoration: 'none',
+                    boxSizing: 'border-box',
+                    gap: '12px',
+                  }}
+                >
+                  <div style={{ textAlign: 'left' }}>
+                    <span
+                      style={{
+                        display: 'block',
+                        fontSize: '10px',
+                        fontWeight: 800,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.08em',
+                        color: '#FF5E5E',
+                        lineHeight: 1.2,
+                      }}
+                    >
+                      Guía interactiva por uso
+                    </span>
+                    <span
+                      style={{
+                        display: 'block',
+                        fontSize: '13px',
+                        fontWeight: 800,
+                        color: '#495D56',
+                        lineHeight: 1.3,
+                        marginTop: '3px',
+                      }}
+                    >
+                      Ver catálogo completo por tipo de empaque
+                    </span>
+                  </div>
+                  <span
+                    style={{
+                      width: '30px',
+                      height: '30px',
+                      borderRadius: '10px',
+                      background: '#495D56',
+                      color: '#FFFFFF',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '14px',
+                      fontWeight: 800,
+                      flexShrink: 0,
+                    }}
+                  >
+                    →
+                  </span>
+                </a>
+              </div>
+            )}
+          </React.Fragment>
+        );
+      })}
     </>
   );
 }
