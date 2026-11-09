@@ -296,12 +296,14 @@ export default function PublicCatalogView({ initialProducts = [] }) {
       return a.localeCompare(b);
     });
 
-    // Ordenar sellos de menor a mayor tamaño para facilitar lectura
+    // Ordenar sellos de menor a mayor tamaño (y luego accesorios/packs por precio)
     sortedKeys.forEach((k) => {
       map[k].sort((a, b) => {
         const da = parseDimensionsFromText(a.descripcion || '');
         const db = parseDimensionsFromText(b.descripcion || '');
-        if (da && db) return da.area - db.area;
+        if (da && db) return da.areaCm2 - db.areaCm2 || Number(a.precio || 0) - Number(b.precio || 0);
+        if (da && !db) return -1;
+        if (!da && db) return 1;
         return Number(a.precio || 0) - Number(b.precio || 0);
       });
     });
