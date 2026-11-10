@@ -1,5 +1,9 @@
 // src/components/PublicCatalogView.jsx
 import React, { useState, useEffect, useMemo } from 'react';
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { Pagination } from 'swiper/modules';
+import 'swiper/css';
+import 'swiper/css/pagination';
 import { supabase } from '../lib/supabase';
 import { addToCart } from '../store/cart';
 import { parseDimensionsFromText } from '../lib/pricingEngine';
@@ -331,65 +335,80 @@ export default function PublicCatalogView({ initialProducts = [] }) {
         </p>
       </div>
 
-      {/* 3 CARDS CUADRADAS DE FILTRO POR CRITERIO DE USO */}
-      <div style={styles.usageGrid}>
-        {USAGE_FILTERS.map((card) => {
-          const isActive = selectedUsage === card.id;
-          return (
-            <button
-              key={card.id}
-              type="button"
-              onClick={() => setSelectedUsage((prev) => (prev === card.id ? null : card.id))}
-              style={{
-                ...styles.usageCard,
-                background: isActive ? '#495D56' : '#FFFFFF',
-                color: isActive ? '#FFFFFF' : '#495D56',
-                borderColor: isActive ? '#495D56' : '#DFDED9',
-                boxShadow: isActive
-                  ? '0 10px 24px rgba(73, 93, 86, 0.22)'
-                  : '0 4px 14px rgba(0, 0, 0, 0.04)',
-              }}
-            >
-              <div
-                style={{
-                  ...styles.iconCircle,
-                  background: isActive ? 'rgba(255,255,255,0.12)' : '#F4F1E1',
-                }}
-              >
-                <UsageCardIcon type={card.id} active={isActive} />
-              </div>
+      {/* 3 CARDS CUADRADAS DE FILTRO POR CRITERIO DE USO (CARRUSEL SWIPER EN MOBILE / GRILLA EN DESKTOP) */}
+      <div style={styles.usageCarouselContainer}>
+        <Swiper
+          modules={[Pagination]}
+          spaceBetween={12}
+          slidesPerView={1.75}
+          grabCursor={true}
+          slideToClickedSlide={true}
+          pagination={{ clickable: true }}
+          breakpoints={{
+            440: { slidesPerView: 2.15, spaceBetween: 12 },
+            600: { slidesPerView: 3, spaceBetween: 12 },
+          }}
+          style={{ width: '100%', paddingBottom: '28px', paddingTop: '4px' }}
+        >
+          {USAGE_FILTERS.map((card) => {
+            const isActive = selectedUsage === card.id;
+            return (
+              <SwiperSlide key={card.id} style={{ height: 'auto', display: 'flex' }}>
+                <button
+                  type="button"
+                  onClick={() => setSelectedUsage((prev) => (prev === card.id ? null : card.id))}
+                  style={{
+                    ...styles.usageCard,
+                    background: isActive ? '#495D56' : '#FFFFFF',
+                    color: isActive ? '#FFFFFF' : '#495D56',
+                    borderColor: isActive ? '#495D56' : '#DFDED9',
+                    boxShadow: isActive
+                      ? '0 10px 24px rgba(73, 93, 86, 0.22)'
+                      : '0 4px 14px rgba(0, 0, 0, 0.04)',
+                  }}
+                >
+                  <div
+                    style={{
+                      ...styles.iconCircle,
+                      background: isActive ? 'rgba(255,255,255,0.12)' : '#F4F1E1',
+                    }}
+                  >
+                    <UsageCardIcon type={card.id} active={isActive} />
+                  </div>
 
-              <div style={{ fontSize: '13px', fontWeight: 800, lineHeight: 1.2, marginTop: '4px' }}>
-                {card.title}
-              </div>
+                  <div style={{ fontSize: '13px', fontWeight: 800, lineHeight: 1.2, marginTop: '6px' }}>
+                    {card.title}
+                  </div>
 
-              <div
-                style={{
-                  fontSize: '11px',
-                  lineHeight: 1.3,
-                  color: isActive ? '#E2E8F0' : '#64748B',
-                  marginTop: '2px',
-                }}
-              >
-                {card.subtitle}
-              </div>
+                  <div
+                    style={{
+                      fontSize: '11px',
+                      lineHeight: 1.3,
+                      color: isActive ? '#E2E8F0' : '#64748B',
+                      marginTop: '3px',
+                    }}
+                  >
+                    {card.subtitle}
+                  </div>
 
-              <span
-                style={{
-                  marginTop: 'auto',
-                  fontSize: '10px',
-                  fontWeight: 700,
-                  padding: '3px 8px',
-                  borderRadius: '999px',
-                  background: isActive ? '#FF5E5E' : '#F4F1E1',
-                  color: isActive ? '#FFFFFF' : '#998E55',
-                }}
-              >
-                {card.badge}
-              </span>
-            </button>
-          );
-        })}
+                  <span
+                    style={{
+                      marginTop: 'auto',
+                      fontSize: '10px',
+                      fontWeight: 700,
+                      padding: '4px 10px',
+                      borderRadius: '999px',
+                      background: isActive ? '#FF5E5E' : '#F4F1E1',
+                      color: isActive ? '#FFFFFF' : '#998E55',
+                    }}
+                  >
+                    {card.badge}
+                  </span>
+                </button>
+              </SwiperSlide>
+            );
+          })}
+        </Swiper>
       </div>
 
       {/* Barra de búsqueda + estado de filtro activo */}
@@ -519,17 +538,18 @@ const styles = {
     maxWidth: '480px',
     lineHeight: 1.5,
   },
-  usageGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, 1fr)',
-    gap: '10px',
-    marginBottom: '18px',
+  usageCarouselContainer: {
+    width: '100%',
+    marginBottom: '10px',
+    overflow: 'hidden',
   },
   usageCard: {
+    width: '100%',
+    minHeight: '176px',
     aspectRatio: '1 / 1',
     borderRadius: '22px',
     border: '1.5px solid #DFDED9',
-    padding: '12px 8px',
+    padding: '14px 10px',
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
