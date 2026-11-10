@@ -326,13 +326,20 @@ export default function PublicCatalogView({ initialProducts = [] }) {
   return (
     <div style={styles.wrapper}>
       {/* Cabecera de sección */}
-      <div style={{ textAlign: 'center', marginBottom: '22px' }}>
+      <div style={{ textAlign: 'center', marginBottom: '18px' }}>
         <span style={styles.kicker}>GUÍA RÁPIDA DE MEDIDAS Y PRECIOS</span>
         <h1 style={styles.mainTitle}>Catálogo Completo</h1>
         <p style={styles.subtitle}>
           Elegí el tipo de empaque que querés estampar para filtrar las medidas ideales, o explorá
           la lista completa por categoría:
         </p>
+        <div style={{ display: 'flex', justifyContent: 'center', margin: '14px 0 4px 0' }}>
+          <img
+            src="/catalogo-empaques.webp"
+            alt="Guía de tamaños por tipo de empaque"
+            style={{ width: '100%', maxWidth: '300px', height: 'auto', display: 'block' }}
+          />
+        </div>
       </div>
 
       {/* 3 CARDS CUADRADAS DE FILTRO POR CRITERIO DE USO (CARRUSEL SWIPER EN MOBILE / GRILLA EN DESKTOP) */}
