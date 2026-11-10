@@ -16,7 +16,7 @@ const DEFAULT_SLIDES = [
     subtitulo: '',
     imagen: '/portada.png',
     botonTexto: 'Quiero mi sello',
-    botonUrl: '/creador'
+    botonUrl: '#sellos'
   }
 ];
 
@@ -106,7 +106,7 @@ export default function HeroSlider() {
                 {/* Botón Principal (CTA) */}
                 <div className="mt-2">
                   <a
-                    href={slide.botonUrl || '/creador'}
+                    href={slide.botonUrl || '#sellos'}
                     className="btn inline-flex items-center justify-center px-8 py-3 rounded-full bg-[#FF5555] hover:bg-[#E04444] text-white font-bold text-base hover:shadow-lg transition-all"
                   >
                     {slide.botonTexto || 'Quiero mi sello'}
