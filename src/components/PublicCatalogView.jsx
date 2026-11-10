@@ -515,7 +515,7 @@ const styles = {
   wrapper: {
     width: '100%',
     maxWidth: '640px',
-    margin: '0 auto',
+    margin: '54px auto 0 auto',
     padding: '10px 16px 40px 16px',
     fontFamily: 'Inter, sans-serif',
     boxSizing: 'border-box',
