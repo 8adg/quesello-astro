@@ -348,7 +348,14 @@ export default function PublicCatalogView({ initialProducts = [] }) {
             440: { slidesPerView: 2.15, spaceBetween: 12 },
             600: { slidesPerView: 3, spaceBetween: 12 },
           }}
-          style={{ width: '100%', paddingBottom: '28px', paddingTop: '4px' }}
+          style={{
+            width: '100%',
+            paddingTop: '4px',
+            paddingBottom: '28px',
+            paddingLeft: '16px',
+            paddingRight: '16px',
+            boxSizing: 'border-box',
+          }}
         >
           {USAGE_FILTERS.map((card) => {
             const isActive = selectedUsage === card.id;
@@ -539,7 +546,9 @@ const styles = {
     lineHeight: 1.5,
   },
   usageCarouselContainer: {
-    width: '100%',
+    width: 'calc(100% + 32px)',
+    marginLeft: '-16px',
+    marginRight: '-16px',
     marginBottom: '10px',
     overflow: 'hidden',
   },
