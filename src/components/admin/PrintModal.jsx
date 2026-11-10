@@ -5,11 +5,31 @@ import { getOrderSvgUrl, downloadSvgDirect, getOrderDjUrl, downloadPdfDirect } f
 export default function PrintModal({ order, onClose }) {
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState(null);
+  const [copiedQr, setCopiedQr] = useState(false);
 
   if (!order) return null;
 
   const svgUrl = getOrderSvgUrl(order);
   const djUrl = getOrderDjUrl(order);
+
+  const tk = order.token || 'VALIDATION';
+  const qrTrackingUrl = `https://quesello-site.web.app/pedidos/validar.html?id=${order.id}&tk=${tk}`;
+  const clienteNombre = (order.cliente || '').trim() || 'Hola';
+  const trackingShareText = `${clienteNombre} podes seguir el estado de tu pedido en:\n${qrTrackingUrl}`;
+
+  const handleCopyTrackingUrl = async () => {
+    try {
+      await navigator.clipboard.writeText(trackingShareText);
+      setCopiedQr(true);
+      setMsg({
+        text: 'Texto con link de seguimiento copiado al portapapeles',
+        type: 'success',
+      });
+      setTimeout(() => setCopiedQr(false), 2500);
+    } catch (err) {
+      setMsg({ text: 'No se pudo copiar automáticamente', type: 'error' });
+    }
+  };
 
   return (
     <div style={{
@@ -92,6 +112,33 @@ export default function PrintModal({ order, onClose }) {
           >
             <img src="https://api.iconify.design/lucide/file-text.svg?color=%23FF5E5E" style={{ width: '20px' }} alt="" />
             Descargar PDF Termico
+          </button>
+
+          <button
+            type="button"
+            onClick={handleCopyTrackingUrl}
+            style={{
+              padding: '16px',
+              borderRadius: '20px',
+              background: copiedQr ? '#DCFCE7' : '#F4F1E1',
+              color: copiedQr ? '#166534' : '#495D56',
+              border: copiedQr ? '1.5px solid #86EFAC' : '1.5px solid #DFDED9',
+              fontWeight: 700,
+              fontSize: '15px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '10px',
+              transition: 'all 0.2s'
+            }}
+          >
+            <img
+              src={`https://api.iconify.design/lucide/${copiedQr ? 'check' : 'copy'}.svg?color=${encodeURIComponent(copiedQr ? '#166534' : '#495D56')}`}
+              style={{ width: '18px', height: '18px' }}
+              alt=""
+            />
+            {copiedQr ? '¡Texto y URL copiados!' : 'Copiar URL de Seguimiento (QR)'}
           </button>
 
           {svgUrl && (

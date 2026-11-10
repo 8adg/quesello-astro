@@ -345,7 +345,11 @@ export const handleClientSidePDF = async (p, setMsg, setLoading) => {
       doc.addImage(qrBase64, 'PNG', 16, finalY + 22, 25, 25);
     }
     
-    doc.save(`Presupuesto_${p.numero}.pdf`);
+    const cleanCliente = String(p.cliente || 'CLIENTE')
+      .trim()
+      .replace(/[\\/:*?"<>|]+/g, '')
+      .replace(/\s+/g, '_');
+    doc.save(`Presupuesto_${p.numero}-${cleanCliente}.pdf`);
     setMsg({ text: "✅ PDF GENERADO EXITOSAMENTE", type: 'success' });
   } catch (e) { 
     setMsg({ text: "Error: " + e.message, type: 'error' }); 
