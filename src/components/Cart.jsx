@@ -201,8 +201,8 @@ export function CartDrawer() {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
               <div>
-                <label style={{ fontSize: '11px', fontWeight: 700, opacity: errorMsg ? 1 : 0.65, display: 'block', marginBottom: '4px', color: errorMsg ? '#E53E3E' : 'inherit' }}>
-                  {errorMsg ? '⚠️ TELÉFONO OBLIGATORIO' : 'TELÉFONO *'}
+                <label style={{ fontSize: '11px', fontWeight: 700, opacity: errorMsg ? 1 : 0.65, display: 'block', marginBottom: '4px', color: errorMsg ? '#E53E3E' : 'inherit', whiteSpace: 'nowrap' }}>
+                  {errorMsg ? 'OBLIGATORIO' : 'TELÉFONO *'}
                 </label>
                 <input
                   type="tel"
