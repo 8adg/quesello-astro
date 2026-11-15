@@ -356,3 +356,291 @@ export const handleClientSidePDF = async (p, setMsg, setLoading) => {
   }
   setLoading(false);
 };
+
+/**
+ * Dibuja la etiqueta de envío horizontal (800px = 100mm de largo x 384px = ancho cabezal Meow)
+ * respetando exactamente el diseño de la captura.
+ */
+export const renderShippingLabelToCanvas = (canvas, data = {}, logoImg = null) => {
+  const W = 800; // 100mm a 8 dots/mm (203 DPI)
+  const H = 384; // Ancho cabezal térmico Meow (48 bytes * 8 bits = 384 dots)
+  canvas.width = W;
+  canvas.height = H;
+
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = '#000000';
+  ctx.strokeStyle = '#000000';
+  ctx.textBaseline = 'top';
+
+  const fitTextSingleLine = (text, maxWidth, initialSize, minSize = 13, weight = '500') => {
+    let size = initialSize;
+    while (size > minSize) {
+      ctx.font = `${weight} ${size}px Inter, Arial, sans-serif`;
+      if (ctx.measureText(text).width <= maxWidth) break;
+      size -= 1;
+    }
+    return size;
+  };
+
+  // ── 1. CABECERA SUPERIOR (Y: 0 -> 88) ──
+  // Logo Queselló compacto a la izquierda (usando las 2 partes de /header-logo-hd.png: isotipo Q. + logotipo Queselló)
+  if (logoImg && logoImg.complete && logoImg.width >= 900) {
+    // Isotipo circular Q. (x: 0..162, y: 0..164)
+    ctx.drawImage(logoImg, 0, 0, 162, 164, 24, 18, 52, 53);
+    // Logotipo Queselló (x: 538..1000, y: 0..164)
+    ctx.drawImage(logoImg, 538, 0, 462, 164, 92, 19, 195, 52);
+    // Símbolo ®
+    ctx.font = '600 10px Inter, Arial, sans-serif';
+    ctx.fillText('®', 290, 56);
+  } else {
+    ctx.font = '800 34px Inter, Arial, sans-serif';
+    ctx.fillText('Q. Queselló', 24, 24);
+  }
+
+  // Línea vertical divisoria superior (X = 392, Y = 14 -> 88)
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(392, 14);
+  ctx.lineTo(392, 88);
+  ctx.stroke();
+
+  // Bloque derecho superior: ENVÍO N° y Remitente
+  const envioLabel = data.envioNro?.trim()
+    ? `ENVÍO N° ${data.envioNro.trim().toUpperCase()}`
+    : 'ENVÍO N°';
+  const remitenteText = (data.remitente || 'MATIAS OCHOA - MAR DEL PLATA').trim().toUpperCase();
+
+  ctx.font = '500 19px Inter, Arial, sans-serif';
+  ctx.fillText(envioLabel, 426, 26);
+
+  fitTextSingleLine(remitenteText, 350, 19, 12, '500');
+  ctx.fillText(remitenteText, 426, 54);
+
+  // Primera línea horizontal divisoria (X: 24 -> 776, Y = 88)
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(24, 88);
+  ctx.lineTo(776, 88);
+  ctx.stroke();
+
+  // ── 2. CUERPO CENTRAL: DESTINATARIO Y DIRECCIÓN (Y: 88 -> 278) ──
+  ctx.font = '500 18px Inter, Arial, sans-serif';
+  ctx.fillText('DESTINATARIO:', 28, 104);
+
+  const destinatarioText = (data.destinatario || 'NOMBRE DEL DESTINATARIO').trim().toUpperCase();
+  const destFontSize = fitTextSingleLine(destinatarioText, 748, 44, 20, '800');
+  const destY = 132 + Math.max(0, Math.round((44 - destFontSize) * 0.45));
+  ctx.fillText(destinatarioText, 26, destY);
+
+  ctx.font = '800 18px Inter, Arial, sans-serif';
+  ctx.fillText('DIRECCIÓN:', 26, 202);
+
+  const direccionText = (data.direccion || 'DIRECCIÓN - LOCALIDAD - PROVINCIA').trim().toUpperCase();
+  fitTextSingleLine(direccionText, 748, 23, 13, '500');
+  ctx.fillText(direccionText, 26, 231);
+
+  // ── 3. PIE INFERIOR: TELÉFONO Y DESTINO (Y: 278 -> 384) ──
+  // Segunda línea horizontal divisoria (X: 24 -> 776, Y = 278)
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(24, 278);
+  ctx.lineTo(776, 278);
+  ctx.stroke();
+
+  // Línea vertical divisoria inferior (X = 392, Y = 278 -> 368)
+  ctx.beginPath();
+  ctx.moveTo(392, 278);
+  ctx.lineTo(392, 368);
+  ctx.stroke();
+
+  // Columna izquierda: TELÉFONO
+  ctx.font = '800 18px Inter, Arial, sans-serif';
+  ctx.fillText('TELÉFONO:', 28, 296);
+
+  const telefonoText = (data.telefono || '+54 9 ...').trim().toUpperCase();
+  fitTextSingleLine(telefonoText, 352, 24, 13, '500');
+  ctx.fillText(telefonoText, 26, 326);
+
+  // Columna derecha: DESTINO
+  ctx.font = '800 18px Inter, Arial, sans-serif';
+  ctx.fillText('DESTINO:', 426, 296);
+
+  const destinoText = (data.destino || 'SUCURSAL / TERMINAL').trim().toUpperCase();
+  fitTextSingleLine(destinoText, 350, 24, 13, '500');
+  ctx.fillText(destinoText, 426, 326);
+
+  return canvas;
+};
+
+/**
+ * Genera el canvas rotado 90° (384px de ancho de cabezal x 800px = 100mm de avance)
+ * para imprimir la etiqueta horizontal a lo largo del rollo de la Meow Printer.
+ */
+export const generateShippingLabelRollCanvas = async (data = {}) => {
+  const logoImg = new Image();
+  logoImg.crossOrigin = 'anonymous';
+  logoImg.src = '/header-logo-hd.png';
+  await new Promise((res) => {
+    logoImg.onload = res;
+    logoImg.onerror = res;
+    setTimeout(res, 1500);
+  });
+
+  const horizCanvas = document.createElement('canvas');
+  renderShippingLabelToCanvas(horizCanvas, data, logoImg);
+
+  // Rotar 90° en sentido horario sobre un lienzo de 384px (ancho printer) x 800px (100mm de largo)
+  const rollCanvas = document.createElement('canvas');
+  rollCanvas.width = 384;
+  rollCanvas.height = 800;
+  const rctx = rollCanvas.getContext('2d');
+  rctx.fillStyle = '#FFFFFF';
+  rctx.fillRect(0, 0, 384, 800);
+  rctx.save();
+  rctx.translate(384, 0);
+  rctx.rotate(Math.PI / 2);
+  rctx.drawImage(horizCanvas, 0, 0);
+  rctx.restore();
+
+  return rollCanvas;
+};
+
+/**
+ * Envía la etiqueta de envío (100mm x ancho cabezal) a la impresora térmica Meow vía Web Bluetooth
+ */
+export const handlePrintShippingLabelMeow = async (labelData, setMsg, setLoading) => {
+  if (!navigator.bluetooth) {
+    setMsg({ text: 'Tu navegador no soporta Bluetooth Web', type: 'error' });
+    return;
+  }
+  setLoading(true);
+  setMsg({ text: 'ESCANEANDO IMPRESORA MEOW...', type: 'success' });
+  try {
+    const device = await navigator.bluetooth.requestDevice({
+      filters: [
+        { namePrefix: 'MXW' },
+        { namePrefix: 'GB' },
+        { namePrefix: 'Paperang' },
+        { namePrefix: 'Printer' },
+      ],
+      optionalServices: ['0000ae30-0000-1000-8000-00805f9b34fb', 0xae30, 0xaf30, 0xff00],
+    });
+
+    setMsg({ text: 'CONECTANDO A ' + device.name + '...', type: 'success' });
+    const server = await device.gatt.connect();
+    await sleep(500);
+
+    const services = await server.getPrimaryServices();
+    let controlChar, dataChar;
+
+    for (const s of services) {
+      const chars = await s.getCharacteristics();
+      for (const c of chars) {
+        if (c.uuid.includes('ae01')) controlChar = c;
+        if (c.uuid.includes('ae03')) dataChar = c;
+      }
+    }
+
+    if (!controlChar) {
+      for (const s of services) {
+        const chars = await s.getCharacteristics();
+        if (!controlChar)
+          controlChar = chars.find((c) => c.properties.write || c.properties.writeWithoutResponse);
+        if (!dataChar)
+          dataChar = chars.find(
+            (c) => (c.properties.write || c.properties.writeWithoutResponse) && c !== controlChar
+          );
+      }
+    }
+
+    if (!controlChar) throw new Error('No se halló canal de control Bluetooth');
+    if (!dataChar) dataChar = controlChar;
+
+    setMsg({ text: 'PREPARANDO ETIQUETA 100MM...', type: 'success' });
+    const canvas = await generateShippingLabelRollCanvas(labelData);
+    const ctx = canvas.getContext('2d');
+    const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+    const rows = [];
+    for (let y = 0; y < canvas.height; y++) {
+      const row = new Uint8Array(canvas.width / 8);
+      for (let x = 0; x < canvas.width; x++) {
+        const idx = (y * canvas.width + x) * 4;
+        if ((pixels[idx] + pixels[idx + 1] + pixels[idx + 2]) / 3 < 135) {
+          row[Math.floor(x / 8)] |= 1 << (x % 8);
+        }
+      }
+      rows.push(row);
+    }
+
+    setMsg({ text: 'IMPRIMIENDO ETIQUETA (100MM)...', type: 'success' });
+
+    await controlChar.writeValue(makeCommand(0xa1, new Uint8Array([0x00])));
+    await sleep(300);
+    await controlChar.writeValue(makeCommand(0xa2, new Uint8Array([0x60])));
+
+    const numLines = rows.length;
+    const startPay = new Uint8Array([numLines & 0xff, (numLines >> 8) & 0xff, 0x30, 0x00]);
+    await controlChar.writeValue(makeCommand(0xa9, startPay));
+    await sleep(500);
+
+    for (let i = 0; i < rows.length; i++) {
+      try {
+        await dataChar.writeValueWithoutResponse(rows[i]);
+        await sleep(15);
+      } catch (bleErr) {
+        await sleep(100);
+        await dataChar.writeValueWithoutResponse(rows[i]);
+      }
+    }
+
+    await controlChar.writeValue(makeCommand(0xad, new Uint8Array([0x00])));
+    await sleep(500);
+
+    setMsg({ text: '¡ETIQUETA IMPRESA CORRECTAMENTE!', type: 'success' });
+    await server.disconnect();
+  } catch (e) {
+    console.error('Error Meow Etiqueta:', e);
+    setMsg({ text: 'Error: ' + e.message, type: 'error' });
+  }
+  setLoading(false);
+};
+
+/**
+ * Descarga un PDF de 100mm x 57mm (apaisado) con el diseño exacto de la etiqueta de envío
+ */
+export const handleShippingLabelPDF = async (labelData, setMsg, setLoading) => {
+  setLoading(true);
+  try {
+    const logoImg = new Image();
+    logoImg.crossOrigin = 'anonymous';
+    logoImg.src = '/header-logo-hd.png';
+    await new Promise((res) => {
+      logoImg.onload = res;
+      logoImg.onerror = res;
+      setTimeout(res, 1500);
+    });
+
+    const horizCanvas = document.createElement('canvas');
+    renderShippingLabelToCanvas(horizCanvas, labelData, logoImg);
+    const dataUrl = horizCanvas.toDataURL('image/png');
+
+    const doc = new jsPDF({
+      orientation: 'landscape',
+      unit: 'mm',
+      format: [100, 48],
+    });
+    doc.addImage(dataUrl, 'PNG', 0, 0, 100, 48);
+
+    const cleanDest = String(labelData.destinatario || 'ENVIO')
+      .trim()
+      .replace(/[\\/:*?"<>|]+/g, '')
+      .replace(/\s+/g, '_');
+    doc.save(`Etiqueta_Envio_${cleanDest}.pdf`);
+    if (setMsg) setMsg({ text: 'PDF de etiqueta (100mm) descargado', type: 'success' });
+  } catch (e) {
+    if (setMsg) setMsg({ text: 'Error generando PDF: ' + e.message, type: 'error' });
+  }
+  setLoading(false);
+};
