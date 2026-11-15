@@ -385,15 +385,24 @@ export const renderShippingLabelToCanvas = (canvas, data = {}, logoImg = null) =
   };
 
   // ── 1. CABECERA SUPERIOR (Y: 0 -> 88) ──
-  // Logo Queselló compacto a la izquierda (usando las 2 partes de /header-logo-hd.png: isotipo Q. + logotipo Queselló)
+  // Logo Queselló compacto a la izquierda manteniendo escala 1:1 exacta sin deformación
   if (logoImg && logoImg.complete && logoImg.width >= 900) {
-    // Isotipo circular Q. (x: 0..162, y: 0..164)
-    ctx.drawImage(logoImg, 0, 0, 162, 164, 24, 18, 52, 53);
-    // Logotipo Queselló (x: 538..1000, y: 0..164)
-    ctx.drawImage(logoImg, 538, 0, 462, 164, 92, 19, 195, 52);
+    const srcH = logoImg.height || 164;
+    const targetH = 54;
+    const scale = targetH / srcH;
+
+    // Isotipo circular Q. (x: 0..162, y: 0..srcH) -> ancho exacto proporcional
+    const iconW = 162 * scale;
+    ctx.drawImage(logoImg, 0, 0, 162, srcH, 24, 17, iconW, targetH);
+
+    // Logotipo Queselló (x: 540..1000 -> 460px de ancho, y: 0..srcH) -> ancho exacto proporcional
+    const wordW = 460 * scale;
+    const wordX = 24 + iconW + 18;
+    ctx.drawImage(logoImg, 540, 0, 460, srcH, wordX, 17, wordW, targetH);
+
     // Símbolo ®
     ctx.font = '600 10px Inter, Arial, sans-serif';
-    ctx.fillText('®', 290, 56);
+    ctx.fillText('®', wordX + wordW + 3, 55);
   } else {
     ctx.font = '800 34px Inter, Arial, sans-serif';
     ctx.fillText('Q. Queselló', 24, 24);
