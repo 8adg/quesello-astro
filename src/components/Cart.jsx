@@ -155,7 +155,7 @@ export function CartDrawer() {
         </div>
 
         {mounted && items.length > 0 && (
-          <div style={{ padding: '0 20px 15px 20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <div style={{ padding: '0 0 15px 0', display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
               <div>
                 <label style={{ fontSize: '11px', fontWeight: 700, opacity: 0.65, display: 'block', marginBottom: '4px' }}>
