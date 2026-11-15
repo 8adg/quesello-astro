@@ -144,7 +144,7 @@ export default function SettingsManager() {
   };
 
   return (
-    <div style={{ maxWidth: '880px', fontFamily: 'Inter, sans-serif', paddingBottom: '50px' }}>
+    <div style={{ maxWidth: '1180px', fontFamily: 'Inter, sans-serif', paddingBottom: '50px' }}>
       <header style={{ marginBottom: '26px' }}>
         <h1 style={{ fontSize: '28px', color: '#FF5E5E', fontWeight: 800, margin: 0 }}>
           Configuración y Herramientas
@@ -234,7 +234,7 @@ export default function SettingsManager() {
           }}
         >
           <div>
-            <label style={labelStyle}>DESTINATARIO (GRANDE DESTACADO)</label>
+            <label style={labelStyle}>DESTINATARIO</label>
             <input
               type="text"
               value={labelData.destinatario}
@@ -263,9 +263,10 @@ export default function SettingsManager() {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
             gap: '14px',
-            marginBottom: '22px',
+            marginBottom: '14px',
+            alignItems: 'end',
           }}
         >
           <div>
@@ -282,40 +283,50 @@ export default function SettingsManager() {
           </div>
 
           <div>
-            <label style={labelStyle}>DESTINO / TERMINAL / SUCURSAL</label>
+            <label style={labelStyle}>DESTINO</label>
             <input
               type="text"
               value={labelData.destino}
               onChange={(e) =>
                 setLabelData({ ...labelData, destino: e.target.value.toUpperCase() })
               }
-              placeholder="EJ: TERMINAL LINCOLN"
+              placeholder="Terminal / sucursal (ej: TERMINAL LINCOLN)"
               style={inputStyle}
             />
           </div>
+        </div>
 
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'minmax(140px, 1fr) minmax(240px, 3fr)',
+            gap: '14px',
+            marginBottom: '22px',
+            alignItems: 'end',
+          }}
+        >
           <div>
-            <label style={labelStyle}>ENVÍO N° (OPCIONAL)</label>
+            <label style={labelStyle}>ENVÍO N°</label>
             <input
               type="text"
               value={labelData.envioNro}
               onChange={(e) =>
                 setLabelData({ ...labelData, envioNro: e.target.value.toUpperCase() })
               }
-              placeholder="Vacío o N° (ej: 00842)"
+              placeholder="Opcional (ej: 00842)"
               style={inputStyle}
             />
           </div>
 
           <div>
-            <label style={labelStyle}>REMITENTE (CABECERA DERECHA)</label>
+            <label style={labelStyle}>REMITENTE</label>
             <input
               type="text"
               value={labelData.remitente}
               onChange={(e) =>
                 setLabelData({ ...labelData, remitente: e.target.value.toUpperCase() })
               }
-              placeholder="MATIAS OCHOA - MAR DEL PLATA"
+              placeholder="Cabecera derecha (ej: MATIAS OCHOA - MAR DEL PLATA)"
               style={inputStyle}
             />
           </div>
@@ -376,7 +387,7 @@ export default function SettingsManager() {
               style={{
                 border: '2px solid #EF4444',
                 width: '100%',
-                maxWidth: '680px',
+                maxWidth: '820px',
                 background: '#FFFFFF',
                 boxShadow: '0 6px 20px rgba(0,0,0,0.06)',
               }}
