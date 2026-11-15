@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase';
 const MENU_ITEMS = [
   { id: 'dashboard', label: 'Panel de control', mobileTitle: 'Panel', icon: 'monitor', path: '/admin' },
   { id: 'presupuestos', label: 'Presupuestos', mobileTitle: 'Presupuestos', icon: 'receipt', path: '/admin/presupuestos' },
+  { id: 'clientes', label: 'Clientes', mobileTitle: 'Clientes', icon: 'users', path: '/admin/clientes', hideOnMobileBottom: true },
   { id: 'categorias', label: 'Categorías', mobileTitle: 'Categorías', icon: 'layout-grid', path: '/admin/categorias' },
   { id: 'productos', label: 'Productos', mobileTitle: 'Productos', icon: 'stamp', path: '/admin/productos' },
   { id: 'sliders', label: 'Menús sliders', mobileTitle: 'Sliders', icon: 'list', path: '/admin/sliders' },
@@ -41,6 +42,7 @@ export default function AdminSidebar({ activeId = 'dashboard' }) {
     const iconMap = {
       monitor: 'lucide/monitor',
       receipt: 'lucide/receipt',
+      users: 'lucide/users',
       'layout-grid': 'lucide/shapes',
       stamp: 'mdi/stamper',
       list: 'lucide/list',

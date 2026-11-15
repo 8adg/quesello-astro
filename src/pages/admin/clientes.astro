@@ -1,0 +1,8 @@
+---
+import AdminLayout from "../../layouts/AdminLayout.astro";
+import ClientesManager from "../../components/admin/ClientesManager.jsx";
+---
+
+<AdminLayout title="Clientes - Queselló Admin" activeId="clientes">
+	<ClientesManager client:load />
+</AdminLayout>

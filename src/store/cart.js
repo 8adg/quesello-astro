@@ -2,6 +2,7 @@ import { atom, computed } from 'nanostores';
 import { persistentAtom } from '@nanostores/persistent';
 import { supabaseAdmin } from '../lib/supabase';
 import { notifyNewWebOrder } from '../lib/pushNotifications';
+import { upsertCliente } from '../lib/clientesHelper';
 
 // Estado persistente: los items del carrito
 export const $cartItems = persistentAtom('quesello_cart', [], {
@@ -12,6 +13,10 @@ export const $cartItems = persistentAtom('quesello_cart', [], {
 // Estado de la UI
 export const $isCartOpen = atom(false);
 export const $customerName = atom('');
+export const $customerFirstName = atom('');
+export const $customerLastName = atom('');
+export const $customerPhone = atom('');
+export const $customerEmail = atom('');
 export const $isSaving = atom(false);
 
 // Estado de la franquicia actual (por defecto Central)
@@ -88,14 +93,25 @@ const generateWhatsAppMessage = (name, cartItems, totalValue) => {
 
 // Procesar pedido (Lógica de Supabase + WhatsApp)
 export const processOrder = async () => {
-  const name = $customerName.get();
+  const firstName = ($customerFirstName.get() || '').trim();
+  const lastName = ($customerLastName.get() || '').trim();
+  const phoneInput = ($customerPhone.get() || '').trim();
+  const emailInput = ($customerEmail.get() || '').trim().toLowerCase();
+  const combinedName = `${firstName} ${lastName}`.trim() || ($customerName.get() || '').trim() || phoneInput;
+
   const items = $cartItems.get();
   const total = $cartTotal.get();
-  
-  if (!name) return;
+
+  if (!phoneInput) return;
   $isSaving.set(true);
   const franq = $currentFranchise.get();
   let phone = franq.whatsapp ? franq.whatsapp.replace(/\D/g, '') : "5492235203360";
+
+  const obsParts = [
+    `Pedido desde WEB - ${franq.nombre}`,
+    `TEL: ${phoneInput}`,
+    emailInput ? `EMAIL: ${emailInput}` : null,
+  ].filter(Boolean);
 
   try {
     const tempId = `W${Date.now().toString().slice(-5)}`;
@@ -103,17 +119,19 @@ export const processOrder = async () => {
       .from("presupuestos")
       .insert([{
         numero: tempId,
-        cliente: name,
+        cliente: combinedName.toUpperCase(),
+        telefono: phoneInput,
+        email: emailInput || null,
         total: total,
         estado: 'PENDIENTE',
         pagado: false,
-        franquicia_id: franq.id, 
-        observaciones: `Pedido desde WEB - ${franq.nombre}`,
+        franquicia_id: franq.id,
+        observaciones: obsParts.join(' | '),
         fecha: new Date().toLocaleDateString('es-AR')
       }])
       .select()
       .single();
-    
+
     if (pError) throw pError;
 
     const itemsToInsert = items.map(it => ({
@@ -127,25 +145,42 @@ export const processOrder = async () => {
     const { error: iError } = await supabaseAdmin.from("presupuesto_items").insert(itemsToInsert);
     if (iError) throw iError;
 
+    // Registrar o actualizar cliente en la tabla `clientes`
+    await upsertCliente({
+      supabaseClient: supabaseAdmin,
+      nombre: firstName,
+      apellido: lastName,
+      nombreCompleto: combinedName,
+      telefono: phoneInput,
+      email: emailInput,
+      franquiciaId: franq.id || 1,
+      incrementOrders: true,
+    });
+
     // Disparar notificación Web Push al celular del Admin incluso si el cliente luego cierra WhatsApp
     await notifyNewWebOrder({
       orderNumber: tempId,
-      clientName: name.toUpperCase(),
+      clientName: combinedName.toUpperCase(),
       total: total,
-      summary: items.map(it => `${it.quantity}x ${it.descripcion}`).join(', ')
+      summary: items.map(it => `${it.quantity}x ${it.descripcion}`).join(', '),
+      phone: phoneInput,
     });
 
-    const fullMsg = generateWhatsAppMessage(name, items, total);
+    const fullMsg = generateWhatsAppMessage(combinedName, items, total);
     window.open(`https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(fullMsg)}`, "_blank");
-    
+
   } catch (err) {
     console.error("Error:", err);
-    const fallbackMsg = generateWhatsAppMessage(name, items, total);
+    const fallbackMsg = generateWhatsAppMessage(combinedName, items, total);
     window.open(`https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(fallbackMsg)}`, "_blank");
   } finally {
     clearCart();
     $isCartOpen.set(false);
     $customerName.set('');
+    $customerFirstName.set('');
+    $customerLastName.set('');
+    $customerPhone.set('');
+    $customerEmail.set('');
     $isSaving.set(false);
   }
 };

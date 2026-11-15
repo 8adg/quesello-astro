@@ -2,13 +2,18 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../../lib/supabase';
 import { getOrderSvgUrl, getOrderDjUrl, cleanObservacionesText, mergeObservacionesWithSvg, downloadSvgDirect, downloadPdfDirect } from './svgOrderUtils';
 import { requoteBudgetItems, quoteCustomDimension } from '../../lib/pricingEngine';
+import { upsertCliente } from '../../lib/clientesHelper';
 
 const BudgetEditor = ({ editingOrder, onSave, onCancel }) => {
   const [catalogo, setCatalogo] = useState([]);
+  const [clientesList, setClientesList] = useState([]);
+  const [showClienteSuggestions, setShowClienteSuggestions] = useState(false);
   const [busquedaProd, setBusquedaProd] = useState("");
   const [carrito, setCarrito] = useState([]);
   
   const [cliente, setCliente] = useState("");
+  const [telefono, setTelefono] = useState("");
+  const [email, setEmail] = useState("");
   const [observaciones, setObservaciones] = useState("");
   const [svgUrl, setSvgUrl] = useState(null);
   const [djUrl, setDjUrl] = useState(null);
@@ -33,8 +38,11 @@ const BudgetEditor = ({ editingOrder, onSave, onCancel }) => {
 
   useEffect(() => {
     loadCatalogo();
+    loadClientes();
     if (editingOrder) {
       setCliente(editingOrder.cliente || "");
+      setTelefono(editingOrder.telefono || "");
+      setEmail(editingOrder.email || "");
       const rawObs = editingOrder.observaciones || "";
       setSvgUrl(getOrderSvgUrl(editingOrder));
       setDjUrl(getOrderDjUrl(editingOrder));
@@ -45,6 +53,8 @@ const BudgetEditor = ({ editingOrder, onSave, onCancel }) => {
       setPagado(!!editingOrder.pagado);
       loadItems(editingOrder.id);
     } else {
+      setTelefono("");
+      setEmail("");
       setSvgUrl(null);
       setDjUrl(null);
       setFecha(new Date().toLocaleDateString('es-AR'));
@@ -55,6 +65,28 @@ const BudgetEditor = ({ editingOrder, onSave, onCancel }) => {
     const { data } = await supabase.from("productos").select("*").eq("franquicia_id", FRANQUICIA_ID).order("descripcion");
     setCatalogo(data || []);
   };
+
+  const loadClientes = async () => {
+    const { data } = await supabase
+      .from("clientes")
+      .select("id, nombre_completo, telefono, email")
+      .eq("franquicia_id", FRANQUICIA_ID)
+      .order("nombre_completo");
+    setClientesList(data || []);
+  };
+
+  const filteredClientes = useMemo(() => {
+    const q = (cliente || "").trim().toLowerCase();
+    if (!q || q.length < 2) return [];
+    return clientesList
+      .filter(
+        (c) =>
+          (c.nombre_completo || "").toLowerCase().includes(q) ||
+          (c.telefono || "").toLowerCase().includes(q) ||
+          (c.email || "").toLowerCase().includes(q)
+      )
+      .slice(0, 6);
+  }, [cliente, clientesList]);
 
   const loadItems = async (pid) => {
     const { data } = await supabase.from("presupuesto_items").select("*").eq("presupuesto_id", pid);
@@ -205,6 +237,8 @@ const BudgetEditor = ({ editingOrder, onSave, onCancel }) => {
 
       const budgetData = {
         cliente: cliente.toUpperCase(),
+        telefono: telefono.trim() || null,
+        email: email.trim().toLowerCase() || null,
         observaciones: mergeObservacionesWithSvg(observaciones, svgUrl, djUrl),
         fecha,
         retiro_sugerido: retiro,
@@ -231,6 +265,17 @@ const BudgetEditor = ({ editingOrder, onSave, onCancel }) => {
         total: it.total 
       }));
       await supabase.from("presupuesto_items").insert(itemsToInsert);
+
+      // Registrar / actualizar cliente en la tabla `clientes` para reutilizar y campañas
+      await upsertCliente({
+        supabaseClient: supabase,
+        nombreCompleto: cliente,
+        telefono: telefono,
+        email: email,
+        franquiciaId: FRANQUICIA_ID,
+        incrementOrders: !editingOrder,
+      });
+
       onSave();
     } catch (err) { alert(err.message); } finally { setLoading(false); }
   };
@@ -383,9 +428,71 @@ const BudgetEditor = ({ editingOrder, onSave, onCancel }) => {
 
       {/* COLUMNA DERECHA: PEDIDO */}
       <div className="be-col-pedido">
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-          <input type="text" placeholder="CLIENTE" value={cliente} onChange={e => setCliente(e.target.value)} style={{ ...inputStyle, fontWeight: 'bold' }} />
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', position: 'relative' }}>
+          <div style={{ position: 'relative' }}>
+            <input
+              type="text"
+              placeholder="CLIENTE"
+              value={cliente}
+              onFocus={() => setShowClienteSuggestions(true)}
+              onBlur={() => setTimeout(() => setShowClienteSuggestions(false), 180)}
+              onChange={e => {
+                setCliente(e.target.value);
+                setShowClienteSuggestions(true);
+              }}
+              style={{ ...inputStyle, fontWeight: 'bold' }}
+            />
+            {showClienteSuggestions && filteredClientes.length > 0 && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '46px',
+                  left: 0,
+                  right: 0,
+                  background: '#FFFFFF',
+                  border: '1px solid #DFDED9',
+                  borderRadius: '12px',
+                  boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
+                  zIndex: 50,
+                  overflow: 'hidden',
+                }}
+              >
+                {filteredClientes.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      setCliente(c.nombre_completo || '');
+                      if (c.telefono) setTelefono(c.telefono);
+                      if (c.email) setEmail(c.email);
+                      setShowClienteSuggestions(false);
+                    }}
+                    style={{
+                      width: '100%',
+                      textAlign: 'left',
+                      padding: '8px 12px',
+                      background: 'transparent',
+                      border: 'none',
+                      borderBottom: '1px solid #F1F5F9',
+                      cursor: 'pointer',
+                      fontFamily: 'Inter',
+                    }}
+                  >
+                    <div style={{ fontSize: '12px', fontWeight: 700, color: '#495D56' }}>{c.nombre_completo}</div>
+                    <div style={{ fontSize: '11px', color: '#998E55' }}>
+                      {[c.telefono, c.email].filter(Boolean).join(' · ') || 'Sin contacto'}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <input type="text" placeholder="FECHA" value={fecha} onChange={e => setFecha(e.target.value)} style={inputStyle} />
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+          <input type="tel" placeholder="TELÉFONO" value={telefono} onChange={e => setTelefono(e.target.value)} style={inputStyle} />
+          <input type="email" placeholder="MAIL (OPCIONAL)" value={email} onChange={e => setEmail(e.target.value)} style={inputStyle} />
         </div>
         <textarea placeholder="OBSERVACIONES" value={observaciones} onChange={e => setObservaciones(e.target.value)} style={{ ...inputStyle, height: '60px' }} />
         {svgUrl && (

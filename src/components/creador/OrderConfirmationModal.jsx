@@ -6,6 +6,7 @@ import Icon from './Icon';
 import { formatPrice } from './useStampProducts';
 import { generateDeclaracionJuradaPDF } from '../../lib/declaracionJuradaGenerator';
 import { notifyNewWebOrder } from '../../lib/pushNotifications';
+import { upsertCliente } from '../../lib/clientesHelper';
 
 export default function OrderConfirmationModal({
   isOpen,
@@ -152,6 +153,8 @@ export default function OrderConfirmationModal({
         .insert([{
           numero: finalNro,
           cliente: fullName.toUpperCase(),
+          telefono: telefono.trim(),
+          email: email.trim().toLowerCase() || null,
           observaciones: obsText,
           total: price,
           estado: 'PENDIENTE',
@@ -163,6 +166,18 @@ export default function OrderConfirmationModal({
         .select()
         .single();
       if (bError) throw bError;
+
+      // 5b. Registrar / actualizar cliente en tabla `clientes`
+      await upsertCliente({
+        supabaseClient: supabase,
+        nombre: nombre.trim(),
+        apellido: apellido.trim(),
+        nombreCompleto: fullName,
+        telefono: telefono.trim(),
+        email: email.trim(),
+        franquiciaId: 1,
+        incrementOrders: true,
+      });
 
       // 6. Ítem de presupuesto
       const { error: itemError } = await supabase.from('presupuesto_items').insert([{

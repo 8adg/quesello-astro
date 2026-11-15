@@ -1,7 +1,8 @@
 import React, { useRef, useEffect, useState } from "react";
 import { useStore } from '@nanostores/react';
 import { 
-  $cartItems, $isCartOpen, $customerName, $isSaving, 
+  $cartItems, $isCartOpen, $customerName, $customerFirstName,
+  $customerLastName, $customerPhone, $customerEmail, $isSaving, 
   $cartTotal, $cartCount, addToCart, removeFromCart, 
   updateQuantity, processOrder 
 } from "../store/cart";
@@ -37,7 +38,10 @@ export function CartDrawer() {
   const items = useStore($cartItems);
   const isCartOpen = useStore($isCartOpen);
   const total = useStore($cartTotal);
-  const customerName = useStore($customerName);
+  const customerFirstName = useStore($customerFirstName);
+  const customerLastName = useStore($customerLastName);
+  const customerPhone = useStore($customerPhone);
+  const customerEmail = useStore($customerEmail);
   const isSaving = useStore($isSaving);
 
   const [errorMsg, setErrorMsg] = useState('');
@@ -101,11 +105,12 @@ export function CartDrawer() {
   }
 
   const handleProcessOrder = async () => {
-    if (!customerName) {
-      setErrorMsg("POR FAVOR COMPLETAR");
+    const cleanPhone = (customerPhone || '').replace(/\D/g, '');
+    if (!cleanPhone || cleanPhone.length < 6) {
+      setErrorMsg("INGRESÁ TU TELÉFONO / WHATSAPP");
       return;
     }
-    const currentName = customerName;
+    const currentName = `${customerFirstName} ${customerLastName}`.trim() || customerPhone;
     await processOrder();
     setToastName(currentName);
     setShowToast(true);
@@ -151,28 +156,95 @@ export function CartDrawer() {
 
         {mounted && items.length > 0 && (
           <div style={{ padding: '0 20px 15px 20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <div>
-              <label style={{ fontSize: '12px', fontWeight: 700, opacity: 0.6, display: 'block', marginBottom: '4px', color: errorMsg ? '#E53E3E' : 'inherit' }}>
-                {errorMsg ? '⚠️ POR FAVOR, INGRESÁ TU NOMBRE' : 'TU NOMBRE Y APELLIDO'}
-              </label>
-              <input 
-                type="text" 
-                placeholder="Ej: Juan Pérez" 
-                value={customerName}
-                onChange={(e) => {
-                  $customerName.set(e.target.value);
-                  if (e.target.value) setErrorMsg('');
-                }}
-                style={{ 
-                  width: '100%', 
-                  padding: '12px', 
-                  borderRadius: '10px', 
-                  border: errorMsg ? '2px solid #E53E3E' : '1px solid #eee', 
-                  fontSize: '14px', 
-                  background: '#f9f9f9',
-                  transition: 'all 0.2s'
-                }}
-              />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: 700, opacity: 0.65, display: 'block', marginBottom: '4px' }}>
+                  NOMBRE
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ej: Juan"
+                  value={customerFirstName}
+                  onChange={(e) => $customerFirstName.set(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '11px 12px',
+                    borderRadius: '10px',
+                    border: '1px solid #d4d4d4',
+                    fontSize: '14px',
+                    background: '#f9f9f9',
+                    boxSizing: 'border-box',
+                  }}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: 700, opacity: 0.65, display: 'block', marginBottom: '4px' }}>
+                  APELLIDO
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ej: Pérez"
+                  value={customerLastName}
+                  onChange={(e) => $customerLastName.set(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '11px 12px',
+                    borderRadius: '10px',
+                    border: '1px solid #d4d4d4',
+                    fontSize: '14px',
+                    background: '#f9f9f9',
+                    boxSizing: 'border-box',
+                  }}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: 700, opacity: errorMsg ? 1 : 0.65, display: 'block', marginBottom: '4px', color: errorMsg ? '#E53E3E' : 'inherit' }}>
+                  {errorMsg ? '⚠️ TELÉFONO OBLIGATORIO' : 'TELÉFONO *'}
+                </label>
+                <input
+                  type="tel"
+                  required
+                  placeholder="Ej: 223 5123456"
+                  value={customerPhone}
+                  onChange={(e) => {
+                    $customerPhone.set(e.target.value);
+                    if (e.target.value.replace(/\D/g, '').length >= 6) setErrorMsg('');
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '11px 12px',
+                    borderRadius: '10px',
+                    border: errorMsg ? '2px solid #E53E3E' : '1px solid #d4d4d4',
+                    fontSize: '14px',
+                    background: '#f9f9f9',
+                    boxSizing: 'border-box',
+                    transition: 'all 0.2s',
+                  }}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: 700, opacity: 0.65, display: 'block', marginBottom: '4px' }}>
+                  MAIL
+                </label>
+                <input
+                  type="email"
+                  placeholder="tu@mail.com"
+                  value={customerEmail}
+                  onChange={(e) => $customerEmail.set(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '11px 12px',
+                    borderRadius: '10px',
+                    border: '1px solid #d4d4d4',
+                    fontSize: '14px',
+                    background: '#f9f9f9',
+                    boxSizing: 'border-box',
+                  }}
+                />
+              </div>
             </div>
           </div>
         )}
